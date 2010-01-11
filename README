@@ -1,0 +1,81 @@
+README for fcomUtil
+
+Usage Notes: 
+
+The fcomUtil module contains functions required to allow an application to
+generate FCOM IDs based on the PV name of the associated data to be multicast
+via FCOM.
+
+I - Adding the fcomUtil package to your IOC application:
+-------------------------------------------------------
+
+(1) Add FCOMUTIL to configure/RELEASE and clean/rebuild configure:
+
+   FCOMUTIL=/afs/slac/g/lcls/epics/modules/fcomUtil/<version>
+
+(2) Link the fcomUtil library into your app by adding to xxxApp/src/Makefile:
+
+   xxx_LIBS += fcomUtil
+
+(3) Add the following .dbd files to xxxApp/src/Makefile 
+    or to xxxApp/src/xxxInclude.dbd:
+
+   xxx_DBD += fcomUtil.dbd
+
+(4) To let an application use fcomUtil, FCOM is a dependency and must also be
+   	built into the app.  See the fcom module README for instructions to build 
+   	in fcom module - excerpt included below...
+ 
+ *****************************************************************
+ - From the FCOM README:
+    o #include <fcom_api.h>  // fnetUtil module includes
+    o link with -lfcomBSD (for FCOM over the regular TCP/IP stack)
+    o link with -lfcom    (for FCOM over the dedicated stack *** NOT IMPLEMENTED YET ***)
+    Programming (API) documentation is available in 'doc/fcom_icd.pdf'.
+
+    OS setup information 
+   --------------------
+
+   On machines with multiple NICs a routing table entry should be added
+   so that multicast traffic goes over the correct interface.
+
+      RTEMS: rtconf(1, <fcom-mcast-prefix>, <ip-of-interface>, <mcast-prefix-netmask>)
+
+      LINUX: route add -net <fcom-mcast-prefix> netmask <mcast-prefix-netmask> dev <nic-name>  
+
+    Build Note:
+
+   the 'udpComm' module must be checked out of the *** SSRL REPOSITORY ***
+   into the 'src' subdirectory.
+***********************************************************************
+Useage for fnetUtil:
+ iocshell command "fcomUtilGetFcomID(string for pvName)" has been coded and tested-
+ Using the iocshell commands listed on the left below to test fcomUtil generation 
+ of GID, SID, FcomIDs, the corresponding data was collected.
+
+fcomUtilGetFcomID("BPMS:IN20:221:X")               GID=0x48; SID=0xe5; FcomID= 0x104800e5 //same SID for X, Y, TMIT
+fcomUtilGetFcomID("BPMS:IN20:221:Y")               GID=0x48; SID=0xe5; FcomID= 0x104800e5 
+fcomUtilGetFcomID("BPMS:IN20:221:TMIT")            GID=0x48; SID=0xe5; FcomID= 0x104800e5 
+fcomUtilGetFcomID("XCOR:UND1:3380:BCTRL:SETPV_1")  GID=0x556; SID=0xd349; FcomID= 0x1556d349 
+fcomUtilGetFcomID("YCOR:UND1:3380:BCTRL:SETPV_0")  GID=0x556; SID=0xd348; FcomID= 0x1556d348 
+fcomUtilGetFcomID("BLEN:LI21:265:ARAW")            GID=0x82; SID=0x109; FcomID= 0x10820109 // same SID for ARAW, AIMAX, BIMAX
+fcomUtilGetFcomID("BLEN:LI21:265:AIMAX")           GID=0x82; SID=0x109; FcomID= 0x10820109  
+fcomUtilGetFcomID("BLEN:LI21:265:BIMAX")           GID=0x82; SID=0x109; FcomID= 0x10820109
+fcomUtilGetFcomID("BLEN:LI21:286:BIMAX")           GID=0x82; SID=0x11e; FcomID= 0x1082011e // same group, different SID for 286 
+fcomUtilGetFcomID("BPMS:BSY0:85:TMIT")             GID=0x41; SID=0x55; FcomID= 0x10410055 
+fcomUtilGetFcomID("BPMS:BSY0:92:X")                GID=0x41; SID=0x5c; FcomID= 0x1041005c
+fcomUtilGetFcomID("ACCL:IN20:400:L0B_A:SETPV_O")   GID=0x508; SID=0x18; FcomID= 0x15080018 // valid rf 
+fcomUtilGetFcomID("ACCL:IN20:400:L0B_P:SETPV_O")   FCOM_ID_NONE ... Invalid SID            // rf doesn't participate
+fcomUtilGetFcomID("ACCL:LI21:1:L1S_A:SETPV_1")     GID=0x509; SID=0x39; FcomID= 0x15090039
+fcomUtilGetFcomID("ACCL:LI21:1:L1S_P:SETPV_0")     GID=0x509; SID=0x28; FcomID= 0x15090028 
+fcomUtilGetFcomID("ACCL:LI21:1:L1S_P:SETPV_1")     GID=0x509; SID=0x29; FcomID= 0x15090029      
+fcomUtilGetFcomID("DIAN:LI21:1:L1S_P:SETPV_1")     FCOM_ID_NONE ... Invalid GID            // invalid device name
+
+
+
+
+
+
+
+
+	
