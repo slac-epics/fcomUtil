@@ -292,7 +292,7 @@ static FcomID fcom2GID (const char* deviceType_ptr, const char * area_ptr, const
 
 
 	if (device_mask == invalid) {
-		DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcom2GID: invalid device mask for area: %s\n", (char *)(devtype_ca[i]) ));
+		DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcom2GID: invalid device mask for device %s\n", (char*) deviceType_ptr ));
 	} else {
 		/*  Create (16bit) GID from pv name string using 	FCOM_MASK_<READBACK, SETPOINT> << 10 | dev << 6  | area */
 		/* if attib_ptr contains an actuator setpoint (BCTRL, L0B_A, L1S_P, L1S_A, P, A), then set setpoint bit
