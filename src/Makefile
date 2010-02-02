@@ -13,6 +13,7 @@ USR_CFLAGS_linux-x86 += -g
 USR_CFLAGS += -DDEBUG_PRINT
 
 INC += fcomUtil.h
+INC += fcomLclsBpm.h
 
 DBD += fcomUtil.dbd
 
