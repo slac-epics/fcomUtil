@@ -130,7 +130,12 @@ unit # - up 9999 decimal = 0x270F hex = 14 bits       */
 
 FcomID fcomLCLSPV2FcomID (const char* pvName_ptr );
 void  fcomUtilGetFcomID(const char * pvNameString);
-
+int fcomParseLCLSPvName (const char * pvName_ca, 
+						 char * deviceType_ca, 
+						 char * area_ca, 
+						 char * unit_ca, 
+						 char * attrib_ca, 
+						 char * slot_ca );
 #ifdef __cplusplus
 }
 #endif 	/* __cplusplus */

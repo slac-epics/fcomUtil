@@ -11,7 +11,7 @@
         LCLS | Electron Beam Systems | Controls | Fast Feedback | FCOM | FCOM ID Assignment Design
 
   Auth: 13 Nov 2009, dROGIND    created
-  Rev:
+  Rev:  17 Feb 2010, drogind    exposed fcomParseLCLSPvName() as public
 
 
 -----------------------------------------------------------------------------*/
@@ -133,7 +133,7 @@ static char * fcomStrtok_r(char *s1, const char *s2, char **lasts)  {
  *                                  also can be passed in as null
  *
  *******************************************************************************/
-static int fcomParseLCLSPvName (const char * pvName_ca, char * deviceType_ca, char * area_ca, char * unit_ca, char * attrib_ca, char * slot_ca ) {
+int fcomParseLCLSPvName (const char * pvName_ca, char * deviceType_ca, char * area_ca, char * unit_ca, char * attrib_ca, char * slot_ca ) {
   int status = 1;   /* success */
   char myName_ca[PVNAME_MAX];
   char * myName_ptr = & (myName_ca[0]);
