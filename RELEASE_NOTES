@@ -1,2 +1,5 @@
+fcomUtil-R0-1-1:   Built against rtems 4.9.3 and EPICS BASE:
+                   base-R3-14-8-2-lcls5
+                   Initial production Release
 FcomUtil-R0-1-0:
   Initial, experimental release.  
