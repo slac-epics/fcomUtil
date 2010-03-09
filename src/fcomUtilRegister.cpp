@@ -42,7 +42,33 @@ static void fcomUtilGetFcomIDCall(const iocshArgBuf *args) {
   fcomUtilGetFcomID(args[0].sval);
 }
   
+/* register fcomUtilGethostbyname for iocSh */
+static const iocshArg fcomUtilGethostbynameArg0 = { "hostName", iocshArgString};
+static const iocshArg fcomUtilGethostbynameArg1 = { "hostName", iocshArgInt   };
+static const iocshArg * const fcomUtilGethostbynameArgs[2] = {
+	&fcomUtilGethostbynameArg0,
+	&fcomUtilGethostbynameArg1
+};
 
+/* register fcomUtilSetIPADDR1 for iocSh */
+static const iocshArg fcomUtilSetIPADDR1Arg0 = { "postfix", iocshArgString};
+static const iocshArg * const fcomUtilSetIPADDR1Args[1] = {&fcomUtilSetIPADDR1Arg0};
+static const iocshFuncDef fcomUtilSetIPADDR1FuncDef = 
+  {"fcomUtilSetIPADDR1", 1, fcomUtilSetIPADDR1Args };
+static void fcomUtilSetIPADDR1Call(const iocshArgBuf *args) {
+  fcomUtilSetIPADDR1(args[0].sval);
+}
+ 
+static const iocshFuncDef fcomUtilGethostbynameFuncDef = 
+  {"fcomUtilGethostbyname", 2, fcomUtilGethostbynameArgs };
+static void fcomUtilGethostbynameCall(const iocshArgBuf *args) {
+char *val = fcomUtilGethostbyname(args[0].sval, (unsigned)args[1].ival);
+	if ( val ) {
+		printf("%s\n",val);
+		free(val);
+	}
+}
+ 
 /*=============================================================================
 
   Name: fcomUtilRegistrar
@@ -60,6 +86,8 @@ static void fcomUtilGetFcomIDCall(const iocshArgBuf *args) {
 ==============================================================================*/
 void fcomUtilRegistrar() {
 	iocshRegister(&fcomUtilGetFcomIDFuncDef, fcomUtilGetFcomIDCall);
+	iocshRegister(&fcomUtilGethostbynameFuncDef, fcomUtilGethostbynameCall);
+	iocshRegister(&fcomUtilSetIPADDR1FuncDef, fcomUtilSetIPADDR1Call);
 }
 
 epicsExportRegistrar(fcomUtilRegistrar);

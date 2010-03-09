@@ -136,6 +136,24 @@ int fcomParseLCLSPvName (const char * pvName_ca,
 						 char * unit_ca, 
 						 char * attrib_ca, 
 						 char * slot_ca );
+
+/* Try to translate a host name into a 'dot notation' IPv4 address.
+ * The returned string is 'malloc()ed' and may be free()ed when no
+ * longer in use.
+ * If a nonzero port number is passed then the string ":<port>" is
+ * appended to the returned address.
+ *
+ * RETURNS: string or NULL if host name could not be looked up.
+ */
+char *fcomUtilGethostbyname(const char *name, unsigned port);
+
+/* Lookup the result of 'gethostname' with 'postfix' appended
+ * and set the environment variable IPADDR1 to the result
+ * of the lookup (in 'dot notation').
+ * The IPADDR1 variable is unset if the lookup is not successful.
+ */
+void  fcomUtilSetIPADDR1(const char *postfix);
+
 #ifdef __cplusplus
 }
 #endif 	/* __cplusplus */

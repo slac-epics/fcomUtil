@@ -34,9 +34,12 @@
 /* c includes */
 #include <string.h>         /* memcpy */
 #include <stdlib.h>         /* atoi */
+#include <unistd.h>         /* gethostname */
 /* modules */
 #include    <fcom_api.h>   /* Note: #define FCOM_ID_NONE   0  to be added by Till */
 #include    <fcomUtil.h>
+
+#include    <osiSock.h>
 
 static char * fcomStrtok_r(char *s1, const char *s2, char **lasts);
 
@@ -510,4 +513,47 @@ void fcomUtilGetFcomID (const char * pvNameString)
           printf ("FcomID=0x%lx for signal=%s\n", (unsigned long) fcomid, pvNameString);
   else printf ("No FcomID found, sorry \n");
   
+}
+
+
+char *
+fcomUtilGethostbyname(const char *name, unsigned port)
+{
+char           *rval;
+union {
+	struct in_addr ina;
+	uint8_t        oct[4];
+}               a;
+int             len;
+
+	/* xxx.xxx.xxx.xxx:yyyyy\0 */
+	if ( !name || hostToIPAddr(name, &a.ina) || ! (rval=malloc(4*4+5+1)) )
+		return 0;
+
+	len = sprintf(rval, "%u.%u.%u.%u", a.oct[0], a.oct[1], a.oct[2], a.oct[3]);
+	if ( 0 != port )
+		sprintf(rval+len,":%u",port);
+	return rval;
+}
+
+void
+fcomUtilSetIPADDR1(const char *postfix)
+{
+char buf[100];
+char *val;
+
+	if (    postfix
+        &&  0 == gethostname(buf,sizeof(buf))
+        &&  strlen(buf)+strlen(postfix) < sizeof(buf) ) {
+
+		strcat(buf,postfix);
+
+		if ( (val = fcomUtilGethostbyname(buf,0)) ) {
+			setenv("IPADDR1",val,1);
+			free(val);
+			return;
+		}
+	}
+	/* failure */
+	unsetenv("IPADDR1");
 }
