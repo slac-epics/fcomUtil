@@ -430,17 +430,17 @@ void fcomConvertSpecialCases(const char* pvName_p, char* pvName_ptr)
 {
   if (0==(strncmp("BPMS:LTU1:910", pvName_p, 13))) {
 	strcpy(pvName_ptr, "BPMS:UND1:10:X"); /* X, Y, TMIT generate same id, use X */
-	DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcomConvertSpecialCases: nonconformist signal %s becomes %s\n",
+	DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcomConvertSpecialCases: nonconformist signal %s becomes %s to get FcomID\n",
 									  (char *)pvName_p, (char *)pvName_ptr));
   }
   else if (0==(strncmp("BPMS:LTU1:960", pvName_p, 13))) {
 	strcpy(pvName_ptr, "BPMS:UND1:60:X");
-	DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcomConvertSpecialCases: nonconformist signal %s becomes %s\n",
+	DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcomConvertSpecialCases: nonconformist signal %s becomes %s to get FcomID\n",
 									  (char *)pvName_p, (char *)pvName_ptr));
   }
   else if (0==(strncmp("BPMS:BSY0:1", pvName_p, 11))) {
 	strcpy(pvName_ptr, "BPMS:LI30:901:X");
-	DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcomConvertSpecialCases: nonconformist signal %s becomes %s\n",
+	DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcomConvertSpecialCases: nonconformist signal %s becomes %s to get FcomID\n",
 									  (char *)pvName_p, (char *)pvName_ptr));
   }
   else
