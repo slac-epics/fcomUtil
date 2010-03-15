@@ -415,6 +415,38 @@ static FcomID fcom2SID ( const char* deviceType_ptr, const char * area_ptr, cons
 
 }
 /******************************************************************************/
+/* Name:     fcomConvertSpecialCases
+ * Abstract: convert names of special case devices that do not fit naming convention
+ * Args:     ptr to original PV name, pointer to corrected PV name
+ * Rem:      just rename the pv to something that fits naming convention properly
+ *           for example: BPMS:LTU1:910 is controlled by ioc-und1-bp01, so rename
+ *           the device to BPMS:UND1:10 (does not overlap any existing und BPM)
+ *
+ *           Use X for renaming unit, since X, Y, TMIT generate the same ID for BPMs
+ * Return:   void  (the new string is in pvName_ptr)
+ *
+ *******************************************************************************/
+void fcomConvertSpecialCases(const char* pvName_p, char* pvName_ptr)
+{
+  if (0==(strncmp("BPMS:LTU1:910", pvName_p, 13))) {
+	strcpy(pvName_ptr, "BPMS:UND1:10:X"); /* X, Y, TMIT generate same id, use X */
+	DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcomConvertSpecialCases: nonconformist signal %s becomes %s\n",
+									  (char *)pvName_p, (char *)pvName_ptr));
+  }
+  else if (0==(strncmp("BPMS:LTU1:960", pvName_p, 13))) {
+	strcpy(pvName_ptr, "BPMS:UND1:60:X");
+	DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcomConvertSpecialCases: nonconformist signal %s becomes %s\n",
+									  (char *)pvName_p, (char *)pvName_ptr));
+  }
+  else if (0==(strncmp("BPMS:BSY0:1", pvName_p, 11))) {
+	strcpy(pvName_ptr, "BPMS:LI30:901:X");
+	DEBUGPRINT(DP_INFO,fcomUtilFlag, ("fcomConvertSpecialCases: nonconformist signal %s becomes %s\n",
+									  (char *)pvName_p, (char *)pvName_ptr));
+  }
+  else
+	strcpy(pvName_ptr, pvName_p);
+}
+/******************************************************************************/
 /* Name:     fcomLCLSPV2FcomID
  * Abstract: given a pointer to a null-terminated LCLS PV name string (array of char)
  *           that conforms to the LCLS Naming convention, ie DeviceType:Area:Unit:Attribute,
@@ -430,7 +462,7 @@ static FcomID fcom2SID ( const char* deviceType_ptr, const char * area_ptr, cons
  *          FCOM ID as type FcomID
  *
  *******************************************************************************/
-FcomID fcomLCLSPV2FcomID (const char* pvName_ptr )
+FcomID fcomLCLSPV2FcomID (const char* pvName_p )
 {
 	FcomID fcomid = FCOM_ID_NONE;   /* none found */
 	FcomID gid, sid = FCOM_ID_NONE;
@@ -443,6 +475,13 @@ FcomID fcomLCLSPV2FcomID (const char* pvName_ptr )
 	char unit_ca [PVNAME_MAX];
 	char attrib_ca[PVNAME_MAX];
 	char slot_ca[PVNAME_MAX];
+	char pvName_ca[PVNAME_MAX];
+	char * pvName_ptr = & (pvName_ca[0]);
+	memset(pvName_ptr, 0, sizeof(pvName_ca));
+
+
+	/* look for BPMs that do not fit with naming convention by controlling IOC */   
+	fcomConvertSpecialCases(pvName_p, pvName_ptr);
 
 	/* parse full name into components  */
 	if (fcomParseLCLSPvName (pvName_ptr, (char *)(deviceType_ca),  (char *)(area_ca),  (char *) (unit_ca), 

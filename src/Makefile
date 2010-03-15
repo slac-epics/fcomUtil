@@ -14,6 +14,7 @@ USR_CFLAGS += -DDEBUG_PRINT
 
 INC += fcomUtil.h
 INC += fcomLclsBpm.h
+INC += fcomLclsBlen.h
 
 DBD += fcomUtil.dbd
 

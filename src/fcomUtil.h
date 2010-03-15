@@ -6,7 +6,8 @@
   -- A unique Blob ID is formulated based upon the unique string representation of a PV
   -- Each unique Blob ID is composed of a group ID (GID) and a signal ID (SID)
   -- GIDs map to a unique multicast ID, so are unique
-     Refer to Sharepoint | LCLS | Electron Beam Systems | Controls | Fast Feedback | FCOM | FCOM ID Assignment Design
+     Refer to Sharepoint | LCLS | Electron Beam Systems | Controls | Fast Feedback | 
+	 FCOM | FCOM ID Assignment Design
 
   Auth: 10 DEC-2009, drogind created
   Rev:
@@ -110,25 +111,25 @@ unit # - up 9999 decimal = 0x270F hex = 14 bits       */
 /* For RF PVs */
 
 #define FCOM_MASK_SIG_START                        ((unsigned long)0x00000001)
-#define FCOM_MASK_SIG_ACCL_IN20_400_L0B_A          ((unsigned long)0x00000001)       /*          *ACCL:IN20:400:A  */
+#define FCOM_MASK_SIG_ACCL_IN20_400_L0B_A          ((unsigned long)0x00000001)       /*  *ACCL:IN20:400:A  */
 /* TCav0: */
 
 /* *L1S:   */
-#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_P            ((unsigned long)0x00000002)       /*           * ACCL:LI21:1:P  */
-#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_A            ((unsigned long)0x00000003)       /*           * ACCL:LI21:1:A  */
+#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_P            ((unsigned long)0x00000002)       /* * ACCL:LI21:1:P  */
+#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_A            ((unsigned long)0x00000003)       /** ACCL:LI21:1:A  */
 /* L1X:    */
 
 /* *L2: (new) */
-#define FCOM_MASK_SIG_ACCL_LI24_1_P                ((unsigned long)0x00000004)       /*            *ACCL:LI24:1:P  */
-#define FCOM_MASK_SIG_ACCL_LI24_1_A                ((unsigned long)0x00000005)       /*            *ACCL:LI24:1:A  */
+#define FCOM_MASK_SIG_ACCL_LI24_1_P                ((unsigned long)0x00000004)       /* *ACCL:LI24:1:P  */
+#define FCOM_MASK_SIG_ACCL_LI24_1_A                ((unsigned long)0x00000005)       /*  *ACCL:LI24:1:A  */
 /* TCav3:     */
 
 /* *L3: (new)  */
-#define FCOM_MASK_SIG_ACCL_LI30_1_A                ((unsigned long)0x00000006)      /*            *ACCL:LI30:1:A   */
+#define FCOM_MASK_SIG_ACCL_LI30_1_A                ((unsigned long)0x00000006)      /* *ACCL:LI30:1:A   */
 
 /* Public prototypes for fcomUtil.c ************************************************/
 
-FcomID fcomLCLSPV2FcomID (const char* pvName_ptr );
+FcomID fcomLCLSPV2FcomID (const char* pvName_p );
 void  fcomUtilGetFcomID(const char * pvNameString);
 int fcomParseLCLSPvName (const char * pvName_ca, 
 						 char * deviceType_ca, 
