@@ -1,3 +1,5 @@
+fcomUtil-R0-3-0:   added fcomConvertSpecialCases to change 3 BPM names (internally) in order to get an fcomID
+				   BPMS:LTU1:910, BPMS:LTU1:960, BPMS:BSY0:1 dont' conform to fcom conventions
 fcomUtil-R0-2-0:   Added utilities to DNS-lookup 2ndary NIC name.
 fcomUtil-R0-1-1:   Built against rtems 4.9.3 and EPICS BASE:
                    base-R3-14-8-2-lcls5

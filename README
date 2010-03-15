@@ -30,7 +30,7 @@ I - Adding the fcomUtil package to your IOC application:
  - From the FCOM README:
     o #include <fcom_api.h>  // fnetUtil module includes
     o link with -lfcomBSD (for FCOM over the regular TCP/IP stack)
-    o link with -lfcom    (for FCOM over the dedicated stack *** NOT IMPLEMENTED YET ***)
+    o link with -lfcom    (for FCOM over the dedicated stack)
     Programming (API) documentation is available in 'doc/fcom_icd.pdf'.
 
     OS setup information 
