@@ -1,4 +1,5 @@
 fcomUtil-R0-3-2:   new release to build in fcom-R1-0-0
+                   changed BSY1 are define to BSY0
 fcomUtil-R0-3-1:   fixed RELEASE_SITE for production
 fcomUtil-R0-3-0:   added fcomConvertSpecialCases to change 3 BPM names (internally) in order to get an fcomID
 				   BPMS:LTU1:910, BPMS:LTU1:960, BPMS:BSY0:1 dont' conform to fcom conventions
