@@ -43,7 +43,7 @@ BASE_MODULE_VERSION=base-R3-14-8-2-lcls5
 # the appropriate version dependencies
 # http://www-group.slac.stanford.edu/cdsoft/epics/swModules3.htm
 # ===============================================================
-FCOM_MODULE_VERSION=fcom-R0-1-1
+FCOM_MODULE_VERSION=fcom-R1-0-0
 MISCUTILS_MODULE_VERSION=miscUtils-R2-1-0
 
 # ============================================================
