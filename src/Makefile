@@ -19,6 +19,10 @@ INC += fcomLclsBlen.h
 DBD += fcomUtil.dbd
 
 LIBRARY_IOC = fcomUtil
+PROD_IOC_Linux = pv2fcid
+
+pv2fcid_SRCS = pv2fcid.c
+pv2fcid_LIBS = fcomUtil
 
 fcomUtil_SRCS += fcomUtilRegister.cpp
 fcomUtil_SRCS += fcomUtil.c
