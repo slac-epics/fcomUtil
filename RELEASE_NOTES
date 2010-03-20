@@ -1,3 +1,4 @@
+fcomUtil-R0-3-3:   src/Makefile: added 'pv2fcid' utility to convert PV names to FCOM IDs on linux
 fcomUtil-R0-3-2:   new release to build in fcom-R1-0-0
                    changed BSY1 are define to BSY0
 fcomUtil-R0-3-1:   fixed RELEASE_SITE for production
