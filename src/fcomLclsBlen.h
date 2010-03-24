@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 
-/* Macros to access BPM Array fields; use as follows:
+/* Macros to access BLEN array fields; use as follows:
  *
  * FcomBlobRef p_blenData;
  *
