@@ -1,3 +1,4 @@
+fcomUtil-R0-4-1:   Built against fcom-R1-3-0.
 fcomUtil-R0-4-0:   Built against rtems 4.9.4 and EPICS BASE:
                    base-R3-14-8-2-lcls6
 fcomUtil-R0-3-3:   src/Makefile: added 'pv2fcid' utility to convert PV names to FCOM IDs on linux
