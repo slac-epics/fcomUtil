@@ -56,26 +56,27 @@ static char * fcomStrtok_r(char *s1, const char *s2, char **lasts);
 /************************************************************************************************/
 #define MAX_SETPOINTS   6   /* ensure count is compatible with setpoint_ca list count below !!! */
 #define MAX_AREAS      23   /* ensure count is compatible with area_ca list count below !!!     */
-#define MAX_DEVTYPES    7   /* ensure count is compatible with devtype_ca list count below !!!  */
-#define MAX_RFNAMES     6   /* ensure count is compatible with rfname_ca list count below !!!   */
+#define MAX_DEVTYPES    8   /* ensure count is compatible with devtype_ca list count below !!!  */
+#define MAX_RFNAMES     8   /* ensure count is compatible with rfname_ca list count below !!!   */
 #define MAX_DETECTOR_NAMES  2/* ensure count is compatible with rfname_ca list count below !!!   */
 #define MAX_LOOP_TYPES  3   /* ensure count is compatible with rfname_ca list count below !!!   */
 #define MAX_PAU_SLOTS   4
   
 
 /* list of setpoints - add future here [row] [col]; also update MAX_SETPOINTS above */
-static const char * setpoint_ca[MAX_SETPOINTS] = { "BCTRL", "L0B_A", "L1S_P", "L1S_A", "P", "A"};
+static const char * setpoint_ca[MAX_SETPOINTS] = { "BCTRL", "L0B_ADES", "L1S_PDES", "L1S_ADES", "L2_PDES", "KLY_PDES" };
 
 /* list of areas  - add future here ; also update MAX_AREAS above      */
 static const char * area_ca[MAX_AREAS] = { "IN20", "LI21", "LI22", "LI23", "LI24", "LI25", "LI26", "LI27", "LI28",
-		"LI29", "LI30", "BSY1", "LTU0", "LTU1", "UND1", "DMP1", "FEE1", "NEH1", "FEH1", "FB01", "FB02", "FB03", "FB04"};
+		"LI29", "LI30", "BSY0", "LTU0", "LTU1", "UND1", "DMP1", "FEE1", "NEH1", "FEH1", "FB01", "FB02", "FB03", "FB04"};
 
 /* list of device types- add future here; also update MAX_DEVTYPES above */
-static const char * devtype_ca[MAX_DEVTYPES] = { "BPMS", "BLEN", "TCAV", "ACCL", "XCOR", "YCOR", "FBCK"};
+static const char * devtype_ca[MAX_DEVTYPES] = { "BPMS", "BLEN", "TCAV", "ACCL", "XCOR", "YCOR", "FBCK", "LLRF"};
 
-/* list of RF names */
-static const char * rfname_ca[MAX_RFNAMES]= { "ACCL:IN20:400:L0B_A", "ACCL:LI21:1:L1S_P", "ACCL:LI21:1:L1S_A",
-		"ACCL:LI24:1:P", "ACCL:LI24:1:A", "ACCL:LI30:1:A"};
+/* list of RF names - order must match  */
+static const char * rfname_ca[MAX_RFNAMES]= { "ACCL:IN20:400:L0B_ADES", "LLRF:IN20:RH:L2_PDES", "ACCL:LI21:1:L1S_PDES", 
+		"ACCL:LI21:1:L1S_ADES",	"ACCL:LI24:100:KLY_PDES", "ACCL:LI24:200:KLY_PDES", "ACCL:LI29:0:KLY_PDES", 
+		"ACCL:LI30:0:KLY_PDES"};
 
 /* list of feedback loop types */
 static const char * looptype_ca[MAX_LOOP_TYPES] = {"TR", "LG", "GN" };
@@ -313,7 +314,15 @@ static FcomID fcom2GID (const char* deviceType_ptr, const char * area_ptr, const
 /* Name:     fcom2SID
  * Abstract: Given a PV's Device type, area, unit, attribute, and slot ID,
  *           determines the SID. SID (16 bits) is created by:
- *          	FCOM_MASK_<READBACK, SETPOINT> << 10 | device type << 6  | area
+ *              Detectors:
+ *               Unit #
+ *              RF Actuators:
+ *               signal ID << 4 | slot
+ *              Magnet Actuators:
+ *               unit << 4 | slot
+ *              Feedback Loop States:
+ *               LoopType << 3 | LoopNum
+ *
  * Args:     (input) const char * deviceType_ptr - for determining device type (such as "XCOR\0")
  *                   const char * area_ptr       - for determining area (such as "LTU1\0")
  *                   const char * unit_ptr       - for determining unit (such as "100\0")

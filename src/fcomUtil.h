@@ -50,7 +50,7 @@ extern "C" {
 #define FCOM_MASK_READBACK  ((unsigned long)0x00000000)
 
 /*  Device Type (4 bits) - provides growth for up to 16 device types)
- *  BPM, BLEN, TCAV, ACCL, XCOR, YCOR, FBCK
+ *  BPM, BLEN, TCAV, ACCL, XCOR, YCOR, FBCK, LLRF
  */
 #define FCOM_MASK_DEVICE_START           ((unsigned long)0x00000001)
 #define FCOM_MASK_DEVICE_BPM             ((unsigned long)0x00000001)
@@ -60,6 +60,7 @@ extern "C" {
 #define FCOM_MASK_DEVICE_XCOR            ((unsigned long)0x00000005)
 #define FCOM_MASK_DEVICE_YCOR            ((unsigned long)0x00000006)
 #define FCOM_MASK_DEVICE_FBCK            ((unsigned long)0x00000007)
+#define FCOM_MASK_DEVICE_LLRF            ((unsigned long)0x00000008)
 
 /*   Area (6 bits) - growth for up to 64 areas - 8 (to account for FCOM_GID_MIN); 
      48 are initially used for machine areas ranging
@@ -114,18 +115,22 @@ unit # - up 9999 decimal = 0x270F hex = 14 bits       */
 #define FCOM_MASK_SIG_ACCL_IN20_400_L0B_A          ((unsigned long)0x00000001)       /*  *ACCL:IN20:400:A  */
 /* TCav0: */
 
+/* *L2 REF:   */
+#define FCOM_MASK_SIG_LLRF_IN20_RH_L2_P            ((unsigned long)0x00000002)       /* * LLRF:IN20:RH:P  */
+
 /* *L1S:   */
-#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_P            ((unsigned long)0x00000002)       /* * ACCL:LI21:1:P  */
-#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_A            ((unsigned long)0x00000003)       /** ACCL:LI21:1:A  */
+#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_P            ((unsigned long)0x00000003)       /* * ACCL:LI21:1:P  */
+#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_A            ((unsigned long)0x00000004)       /**  ACCL:LI21:1:A  */
 /* L1X:    */
 
-/* *L2: (new) */
-#define FCOM_MASK_SIG_ACCL_LI24_1_P                ((unsigned long)0x00000004)       /* *ACCL:LI24:1:P  */
-#define FCOM_MASK_SIG_ACCL_LI24_1_A                ((unsigned long)0x00000005)       /*  *ACCL:LI24:1:A  */
+/* *L2 KLYs: (new) */
+#define FCOM_MASK_SIG_ACCL_LI24_100_P                ((unsigned long)0x00000005)       /* *ACCL:LI24:100:P  */
+#define FCOM_MASK_SIG_ACCL_LI24_200_P                ((unsigned long)0x00000006)       /* *ACCL:LI24:200:P  */
 /* TCav3:     */
 
-/* *L3: (new)  */
-#define FCOM_MASK_SIG_ACCL_LI30_1_A                ((unsigned long)0x00000006)      /* *ACCL:LI30:1:A   */
+/* *L3 Subboosters: (new)  */
+#define FCOM_MASK_SIG_ACCL_LI29_0_P                ((unsigned long)0x00000007)      /* *ACCL:LI29:0:P   */
+#define FCOM_MASK_SIG_ACCL_LI30_0_P                ((unsigned long)0x00000008)      /* *ACCL:LI30:0:P   */
 
 /* Public prototypes for fcomUtil.c ************************************************/
 
