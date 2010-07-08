@@ -68,7 +68,7 @@ static const char * setpoint_ca[MAX_SETPOINTS] = { "BCTRL", "L0B_ADES", "L1S_PDE
 
 /* list of areas  - add future here ; also update MAX_AREAS above      */
 static const char * area_ca[MAX_AREAS] = { "IN20", "LI21", "LI22", "LI23", "LI24", "LI25", "LI26", "LI27", "LI28",
-		"LI29", "LI30", "BSY0", "LTU0", "LTU1", "UND1", "DMP1", "FEE1", "NEH1", "FEH1", "FB01", "FB02", "FB03", "FB04"};
+		"LI29", "LI30", "BSY1", "LTU0", "LTU1", "UND1", "DMP1", "FEE1", "NEH1", "FEH1", "FB01", "FB02", "FB03", "FB04"};
 
 /* list of device types- add future here; also update MAX_DEVTYPES above */
 static const char * devtype_ca[MAX_DEVTYPES] = { "BPMS", "BLEN", "TCAV", "ACCL", "XCOR", "YCOR", "FBCK", "LLRF"};
