@@ -102,35 +102,42 @@ unit # - up 9999 decimal = 0x270F hex = 14 bits       */
  *
  *******************************************************************************************/
 
-/* For Controller loops */
+/*  For Controller loops */
 #define FCOM_MASK_AREA_CTRL_MIN        ((unsigned long)0x00000000)
 
 #define FCOM_MASK_LOOPTYPE_TR          ((unsigned long)0x00000000)
 #define FCOM_MASK_LOOPTYPE_GN          ((unsigned long)0x00000001)
 #define FCOM_MASK_LOOPTYPE_LN          ((unsigned long)0x00000002)
 
-/* For RF PVs */
+
+  /* For RF PVs */
 
 #define FCOM_MASK_SIG_START                        ((unsigned long)0x00000001)
-#define FCOM_MASK_SIG_ACCL_IN20_400_L0B_A          ((unsigned long)0x00000001)       /*  *ACCL:IN20:400:A  */
-/* TCav0: */
 
-/* *L2 REF:   */
-#define FCOM_MASK_SIG_LLRF_IN20_RH_L2_P            ((unsigned long)0x00000002)       /* * LLRF:IN20:RH:P  */
+  /* THE FOLLOWING MASKS AREN'T NEEDED - AND IT IS NO LONGER A COMPLETE LIST
 
-/* *L1S:   */
-#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_P            ((unsigned long)0x00000003)       /* * ACCL:LI21:1:P  */
-#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_A            ((unsigned long)0x00000004)       /**  ACCL:LI21:1:A  */
-/* L1X:    */
+#define FCOM_MASK_SIG_ACCL_IN20_400_L0B_A          ((unsigned long)0x00000001)      *ACCL:IN20:400:A  
 
-/* *L2 KLYs: (new) */
-#define FCOM_MASK_SIG_ACCL_LI24_100_P                ((unsigned long)0x00000005)       /* *ACCL:LI24:100:P  */
-#define FCOM_MASK_SIG_ACCL_LI24_200_P                ((unsigned long)0x00000006)       /* *ACCL:LI24:200:P  */
-/* TCav3:     */
+ *L2 REF:  
+#define FCOM_MASK_SIG_LLRF_IN20_RH_L2_P            ((unsigned long)0x00000002)        * LLRF:IN20:RH:P  
 
-/* *L3 Subboosters: (new)  */
-#define FCOM_MASK_SIG_ACCL_LI29_0_P                ((unsigned long)0x00000007)      /* *ACCL:LI29:0:P   */
-#define FCOM_MASK_SIG_ACCL_LI30_0_P                ((unsigned long)0x00000008)      /* *ACCL:LI30:0:P   */
+* *L1S:  
+#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_P            ((unsigned long)0x00000003)        * ACCL:LI21:1:P  
+#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_A            ((unsigned long)0x00000004)       *  ACCL:LI21:1:A 
+
+ *L2 KLYs: (new)
+#define FCOM_MASK_SIG_ACCL_LI24_100_P                ((unsigned long)0x00000005)        *ACCL:LI24:100:P 
+#define FCOM_MASK_SIG_ACCL_LI24_200_P                ((unsigned long)0x00000006)        *ACCL:LI24:200:P  
+ TCav3:   
+
+ *L3 Subboosters: (new) 
+#define FCOM_MASK_SIG_ACCL_LI29_0_P                ((unsigned long)0x00000007)       *ACCL:LI29:0:P   
+#define FCOM_MASK_SIG_ACCL_LI30_0_P                ((unsigned long)0x00000008)       *ACCL:LI30:0:P   
+
+ *L1X:  
+#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_P            ((unsigned long)0x00000003)        * ACCL:LI21:1:P  
+#define FCOM_MASK_SIG_ACCL_LI21_1_LIS_A            ((unsigned long)0x00000004)       *  ACCL:LI21:1:A  
+*/
 
 /* Public prototypes for fcomUtil.c ************************************************/
 
