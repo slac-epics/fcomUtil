@@ -56,7 +56,7 @@ static char * fcomStrtok_r(char *s1, const char *s2, char **lasts);
 /*                                                                                             */
 /************************************************************************************************/
 #define MAX_SETPOINTS  17   /* ensure count is compatible with setpoint_ca list count below !!! */
-#define MAX_AREAS      23   /* ensure count is compatible with area_ca list count below !!!     */
+#define MAX_AREAS      24   /* ensure count is compatible with area_ca list count below !!!     */
 #define MAX_DEVTYPES    8   /* ensure count is compatible with devtype_ca list count below !!!  */
 #define MAX_RFNAMES    24   /* ensure count is compatible with rfname_ca list count below !!!   */
 #define MAX_DETECTOR_NAMES  2/* ensure count is compatible with rfname_ca list count below !!!   */
@@ -71,7 +71,8 @@ static const char * setpoint_ca[MAX_SETPOINTS] = { "BCTRL", "L0A_PDES", "L0A_ADE
 
 /* list of areas  - add future here ; also update MAX_AREAS above      */
 static const char * area_ca[MAX_AREAS] = { "IN20", "LI21", "LI22", "LI23", "LI24", "LI25", "LI26", "LI27", "LI28",
-		"LI29", "LI30", "BSY1", "LTU0", "LTU1", "UND1", "DMP1", "FEE1", "NEH1", "FEH1", "FB01", "FB02", "FB03", "FB04"};
+		"LI29", "LI30", "BSY0", "LTU0", "LTU1", "UND1", "DMP1", "FEE1", "NEH1", "FEH1", "FB01", "FB02", "FB03", "FB04", 
+		"BSY1"};
 
 /* list of device types- add future here; also update MAX_DEVTYPES above */
 static const char * devtype_ca[MAX_DEVTYPES] = { "BPMS", "BLEN", "TCAV", "ACCL", "XCOR", "YCOR", "FBCK", "LLRF"};
