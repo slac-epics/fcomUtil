@@ -79,7 +79,7 @@ extern "C" {
 #define FCOM_MASK_AREA_LI28              ((unsigned long)0x00000009)
 #define FCOM_MASK_AREA_LI29              ((unsigned long)0x0000000A)
 #define FCOM_MASK_AREA_LI30              ((unsigned long)0x0000000B)
-#define FCOM_MASK_AREA_BSY0              ((unsigned long)0x0000000C)
+#define FCOM_MASK_AREA_BSY1              ((unsigned long)0x0000000C)
 #define FCOM_MASK_AREA_LTU0              ((unsigned long)0x0000000D)
 #define FCOM_MASK_AREA_LTU1              ((unsigned long)0x0000000E)
 #define FCOM_MASK_AREA_UND1              ((unsigned long)0x0000000F)
@@ -91,6 +91,7 @@ extern "C" {
 #define FCOM_MASK_AREA_FB02              ((unsigned long)0x00000015)
 #define FCOM_MASK_AREA_FB03              ((unsigned long)0x00000016)
 #define FCOM_MASK_AREA_FB04              ((unsigned long)0x00000017)
+#define FCOM_MASK_AREA_BSY0              ((unsigned long)0x00000018)
 
 /* Detectors SID is
 unit # - up 9999 decimal = 0x270F hex = 14 bits       */
