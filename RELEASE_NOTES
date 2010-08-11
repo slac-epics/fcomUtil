@@ -1,4 +1,4 @@
-fcomUtil-R0-6-0:   added area BSY0 (has erroneous BSY1)
+fcomUtil-R1-0-0:   added area BSY0 (has erroneous BSY1)
 	               added include file fcomLclsFFCtrl.h
 fcomUtil-R0-5-1:   added all RF PV names
 fcomUtil-R0-5-0:   added some RF PV names
