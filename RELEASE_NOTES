@@ -1,3 +1,5 @@
+fcomUtil-R1-1-0:   added new RF names ABSTR_ADES,_PDES, 
+                   updated fcomLclsFFCtrl.h for 10 states only
 fcomUtil-R1-0-0:   added area BSY0 (has erroneous BSY1)
 	               added include file fcomLclsFFCtrl.h
 fcomUtil-R0-5-1:   added all RF PV names
