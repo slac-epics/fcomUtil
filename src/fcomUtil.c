@@ -12,6 +12,7 @@
 
   Auth: 13 Nov 2009, dROGIND    created
   Rev:  17 Feb 2010, drogind    exposed fcomParseLCLSPvName() as public
+        11 Nov 2010, dfairley   added ACCL ABSTR_ADES and PDES for RF control
 
 
 -----------------------------------------------------------------------------*/
@@ -58,7 +59,7 @@ static char * fcomStrtok_r(char *s1, const char *s2, char **lasts);
 #define MAX_SETPOINTS  17   /* ensure count is compatible with setpoint_ca list count below !!! */
 #define MAX_AREAS      24   /* ensure count is compatible with area_ca list count below !!!     */
 #define MAX_DEVTYPES    8   /* ensure count is compatible with devtype_ca list count below !!!  */
-#define MAX_RFNAMES    24   /* ensure count is compatible with rfname_ca list count below !!!   */
+#define MAX_RFNAMES    28   /* ensure count is compatible with rfname_ca list count below !!!   */
 #define MAX_DETECTOR_NAMES  2/* ensure count is compatible with rfname_ca list count below !!!   */
 #define MAX_LOOP_TYPES  3   /* ensure count is compatible with rfname_ca list count below !!!   */
 #define MAX_PAU_SLOTS   4
@@ -84,7 +85,8 @@ static const char * rfname_ca[MAX_RFNAMES]= { "ACCL:IN20:300:L0A_PDES", "ACCL:IN
         "LLRF:IN20:RH:L2_PDES", "LLRF:IN20:RH:L2_ADES", "TCAV:LI24:800:TC3_PDES", "TCAV:LI24:800:TC3_ADES", 
 		"ACCL:LI24:100:KLY_PDES", "ACCL:LI24:100:KLY_ADES", "ACCL:LI24:200:KLY_PDES","ACCL:LI24:200:KLY_ADES",  
 		"ACCL:LI24:300:KLY_PDES","ACCL:LI24:300:KLY_ADES","ACCL:LI29:0:KLY_PDES","ACCL:LI29:0:KLY_ADES",  
-		"ACCL:LI30:0:KLY_PDES", "ACCL:LI30:0:KLY_ADES"};
+		"ACCL:LI30:0:KLY_PDES", "ACCL:LI30:0:KLY_ADES","ACCL:LI24:L2:ABSTR_PDES", "ACCL:LI24:L2:ABSTR_ADES",
+                "ACCL:LI29:L3:ABSTR_PDES", "ACCL:LI29:L3:ABSTR_ADES" };
 
 /* list of feedback loop types */
 static const char * looptype_ca[MAX_LOOP_TYPES] = {"TR", "LG", "GN" };
