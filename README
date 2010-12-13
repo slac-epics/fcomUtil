@@ -48,7 +48,8 @@ I - Adding the fcomUtil package to your IOC application:
    the 'udpComm' module must be checked out of the *** SSRL REPOSITORY ***
    into the 'src' subdirectory.
 ***********************************************************************
-Useage for fnetUtil:
+Useage for fnetUtil: <<<the resulting FcomID have changed, these are old examples >>>
+
  iocshell command "fcomUtilGetFcomID(string for pvName)" has been coded and tested-
  Using the iocshell commands listed on the left below to test fcomUtil generation 
  of GID, SID, FcomIDs, the corresponding data was collected.
