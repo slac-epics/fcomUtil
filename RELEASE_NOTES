@@ -1,4 +1,6 @@
+fcomUtil-R1-1-1-1: Build against fcom-R1-3-2-1
 fcomUtil-R1-1-1:   changed RF names ABSTR_ADES,_PDES, to ACCL:LI22:1:ADES/PDES and ACCL:LI25:1:ADES/PDES 
+
 fcomUtil-R1-1-0:   added new RF names ABSTR_ADES,_PDES, 
                    updated fcomLclsFFCtrl.h for 10 states max
 fcomUtil-R1-0-0:   added area BSY0 (has erroneous BSY1)
