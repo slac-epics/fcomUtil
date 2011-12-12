@@ -1,3 +1,5 @@
+fcomUtil-R1-1-6: changed to build against fcom-R1-3-7 --> udpComm-R2-1-5 --> event-R3-2-2-br_generaltime-1-3
+
 fcomUtil-R1-1-5: changed to build against fcom-R1-3-6 --> udpComm-R2-1-4 --> event-R3-2-2-br_generaltime-1-2
 
 fcomUtil-R1-1-4:   changed to build against fcom-R1-3-5 --> udpComm-R2-1-3 --> event-R3-2-2-br_generaltime-1-1
