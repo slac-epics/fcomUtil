@@ -37,7 +37,7 @@ EPICS_MODULES=$(MODULES_SITE_TOP)
 # http://www-group.slac.stanford.edu/cdsoft/epics/swModules3.htm
 # ===============================================================
 FCOM_MODULE_VERSION=fcom-R1-3-9
-MISCUTILS_MODULE_VERSION=miscUtils-R2-2-1
+MISCUTILS_MODULE_VERSION=miscUtils-R2-2-2
 
 # ============================================================
 # External Support
