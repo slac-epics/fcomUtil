@@ -31,7 +31,7 @@
 #include "debugPrint.h"
 #ifdef  DEBUG_PRINT
 #include <stdio.h>
-  int fcomUtilFlag = DP_INFO;
+  int fcomUtilFlag = DP_ERROR;
 #endif
 
 /* c includes */

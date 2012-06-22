@@ -1,6 +1,6 @@
 #ifndef FCOM_LCLS_FFCTRL_H
 #define FCOM_LCLS_FFCTRL_H
-/* $Id: fcomLclsFFCtrl.h,v 1.1 2010/08/11 19:49:52 dfairley Exp $ */
+/* $Id: fcomLclsFFCtrl.h,v 1.2 2010/11/03 21:50:30 dfairley Exp $ */
 
 /* Header defining the layout of a Controller FCOM blobs
  * as well as status values.
@@ -98,7 +98,7 @@ typedef float FcblStateNumber;
 #define FC_STAT_XPOS_INVAL  FC_STAT_FF0_INVAL       
 #define FC_STAT_YPOS_INVAL  FC_STAT_FF1_INVAL       
 #define FC_STAT_XANG_INVAL  FC_STAT_FF2_INVAL       
-#define FC_STAT_XANG_INVAL  FC_STAT_FF3_INVAL      
+#define FC_STAT_YANG_INVAL  FC_STAT_FF3_INVAL      
 
 #define FC_STAT_DL1E_INVAL  FC_STAT_FF0_INVAL       
 #define FC_STAT_BC1E_INVAL  FC_STAT_FF1_INVAL       
