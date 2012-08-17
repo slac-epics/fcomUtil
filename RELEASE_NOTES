@@ -1,3 +1,5 @@
+fcomUtil-R1-1-13: Build against fcom-R1-3-13
+
 fcomUtil-R1-1-12: fixed a duplicate define of FC_STAT_XANG_INVAL and changed debug print level to DP_ERROR
 fcomUtil-R1-1-11: changed to build against fcom-R1-3-12 --> udpComm-R2-3-0 -->event_R3-2-2-br_generaltime-2-2
 fcomUtil-R1-1-10: changed to build against fcom-R1-3-11 --> udpComm-R2-2-2 -->event_R3-2-2-br_generaltime-2-2
