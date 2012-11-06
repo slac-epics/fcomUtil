@@ -1,3 +1,5 @@
+fcomUtil-R1-1-14: Build against fcom-R1-3-14
+
 fcomUtil-R1-1-13: Build against fcom-R1-3-13
 
 fcomUtil-R1-1-12: fixed a duplicate define of FC_STAT_XANG_INVAL and changed debug print level to DP_ERROR
