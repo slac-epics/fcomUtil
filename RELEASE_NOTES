@@ -1,4 +1,6 @@
-                  Build MAIN_TRUNK against fcom + udpComm MAIN_TRUNK
+fcomUtil-R1-1-16: Build against fcom-R1-3-16
+
+fcomUtil-R1-1-15: Build MAIN_TRUNK against fcom + udpComm MAIN_TRUNK
                   Build for all arches except vxworks
 fcomUtil-R1-1-14: Build against fcom-R1-3-14
 
