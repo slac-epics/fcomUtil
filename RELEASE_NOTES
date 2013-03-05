@@ -1,3 +1,5 @@
+fcomUtil-R1-1-17: Build against fcom-R1-3-17
+
 fcomUtil-R1-1-16: Build against fcom-R1-3-16
 
 fcomUtil-R1-1-15: Build MAIN_TRUNK against fcom + udpComm MAIN_TRUNK
