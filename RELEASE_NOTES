@@ -1,5 +1,7 @@
+fcomUtil-R1-1-25: Re-build against fcom-R1-3-23 for the general audience
+                  Shantha Condamoor: 27-Feb-2014
 fcomUtil-R1-1-24: Build against fcom-R1-3-21
-                  Shantha Condamoor: 27-Feb -2104
+                  Shantha Condamoor: 27-Feb-2014
 				  For llrf6 which does not use fcom-R1-3-23
 				  Add TCAV to detector list.
 fcomUtil-R1-1-23: Build against fcom-R1-3-23
