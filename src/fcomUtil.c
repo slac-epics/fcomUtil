@@ -12,7 +12,9 @@
 
   Auth: 13 Nov 2009, dROGIND    created
   Rev:  17 jun 2010, dfairley  reviewed
-
+  Mod:  27 Feb 2014, scondam	Added support for LLRF Detector PVs
+                                PDES, ADES are Actuator PVs (setpoints)
+								PAVG, AAVG are Detector PVs (readbacks)
 
 -----------------------------------------------------------------------------*/
 
@@ -61,7 +63,8 @@ static char * fcomStrtok_r(char *s1, const char *s2, char **lasts);
 #define MAX_AREAS      24   /* ensure count is compatible with area_ca list count below !!!     */
 #define MAX_DEVTYPES    8   /* ensure count is compatible with devtype_ca list count below !!!  */
 #define MAX_RFNAMES    28   /* ensure count is compatible with rfname_ca list count below !!!   */
-#define MAX_DETECTOR_NAMES  2/* ensure count is compatible with detector_ca list count below !!!   */
+/* Shantha Condamoor: 27-Feb-2014: increased detector list by 1 to add TCAV */
+#define MAX_DETECTOR_NAMES  3/* ensure count is compatible with detector_ca list count below !!!   */
 #define MAX_LOOP_TYPES  3   /* ensure count is compatible with looptype_ca list count below !!!   */
 #define MAX_PAU_SLOTS   4
   
@@ -87,13 +90,14 @@ static const char * rfname_ca[MAX_RFNAMES]= { "ACCL:IN20:300:L0A_PDES", "ACCL:IN
 		"ACCL:LI24:100:KLY_PDES", "ACCL:LI24:100:KLY_ADES", "ACCL:LI24:200:KLY_PDES","ACCL:LI24:200:KLY_ADES",  
 		"ACCL:LI24:300:KLY_PDES","ACCL:LI24:300:KLY_ADES","ACCL:LI29:0:KLY_PDES","ACCL:LI29:0:KLY_ADES",  
 		"ACCL:LI30:0:KLY_PDES", "ACCL:LI30:0:KLY_ADES","ACCL:LI22:1:PDES", "ACCL:LI22:1:ADES",
-                "ACCL:LI25:1:PDES", "ACCL:LI25:1:ADES" };
+                "ACCL:LI25:1:PDES", "ACCL:LI25:1:ADES"};
 
 /* list of feedback loop types */
 static const char * looptype_ca[MAX_LOOP_TYPES] = {"TR", "LG", "GN" };
 
 /* list of detector names */
-static const char * detector_ca[MAX_DETECTOR_NAMES]= {"BPMS", "BLEN" };
+/* Shantha Condamoor: 27-Feb-2014: Added LLRF device TCAV to detector list to enable sending readback PVs like PAVG and AAVG on FCOM */
+static const char * detector_ca[MAX_DETECTOR_NAMES]= {"BPMS", "BLEN", "TCAV" };
 
 /****************************************************************************************************************/
 static char * fcomStrtok_r(char *s1, const char *s2, char **lasts)  {
@@ -356,13 +360,49 @@ static FcomID fcom2SID ( const char* deviceType_ptr, const char * area_ptr, cons
 	
 	/* create storage for getting back the parsed device type, area, and attribute strings */
 	FcomID fcomid = FCOM_ID_NONE;   /* none found */
-
+	
+  {			
+		/* Shantha Condamoor: 27-Feb-2014:
+		   For LLRF, some devices like'TCAV' may appear in both the detector_ca list as well as in rfname_ca list.
+		   All PVs in rfname_ca list are LLRF Actuators (either PDES or ADES PVs only).
+		   If current pv is an LLRF Actuator, then process as an actuator. */	
+			     
+		/* llrf device */
+		sprintf ((char *)rfDevName_ca, "%s:%s:%s:%s", deviceType_ptr,area_ptr, unit_ptr,attrib_ptr);
+		DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcom2SID: Checking for LLRF device %s...\n", (char *) rfDevName_ca ));
+		for (i=0; i<MAX_RFNAMES; i++) {
+			if ( strcmp((char *)(rfname_ca[i]),(char *)rfDevName_ca) == 0 ) {
+	            DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcom2SID: Match found for index %d, device %s...\n", i, (char *) rfname_ca[i] ));
+				/* this is a match for rfName */
+				unsigned long device_mask = FCOM_MASK_SIG_START + i;
+				if (slot_ptr != NULL) {
+					slot = atoi(slot_ptr);
+					if (!(slot < MAX_PAU_SLOTS )) 
+						slot = 0;
+				}	
+				fcomid = (device_mask << MAX_PAU_SLOTS) | slot;
+				found = 1;					
+				DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcom2SID: LLRF - (unique llrf sig id << 4) | slot, where id=0x%lx, slot=%d\n", 
+						device_mask, slot));
+						
+      			if (fcomid !=  FCOM_ID_NONE)
+					fcomid += FCOM_SID_MIN;
+	  			if ( (fcomid >= FCOM_SID_MIN) && (fcomid <= FCOM_SID_MAX))
+					return fcomid;
+	  			else return FCOM_ID_NONE;
+			}
+		}
+	}	
+	
 	/* determine if this is a detector, rf, magnet, or fbck state */
 	for (i=0; i<MAX_DETECTOR_NAMES; i++) {
+	
 		if ( strcmp ( (char *)(detector_ca[i]), deviceType_ptr) == 0 ) {
-			/* this is a detector */
+			/* could be a detector */
+			   			   
 			/* FcomID is unit #   */
-			DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcom2SID: detector found: %s\n", (char *)(detector_ca[i]) ));
+			DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcom2SID: detector found: %s\n", (char *)(detector_ca[i]) ));			   	   
+			   
 			int unit = atoi(unit_ptr);
 			fcomid = (FcomID) unit;
 			found = 1;
@@ -370,6 +410,7 @@ static FcomID fcom2SID ( const char* deviceType_ptr, const char * area_ptr, cons
 			break;
 		}
 	}
+	
 	if (! found) {
 		if (strcmp(deviceType_ptr, "FBCK")==0) {
 			/* feedback state */
@@ -405,28 +446,9 @@ static FcomID fcom2SID ( const char* deviceType_ptr, const char * area_ptr, cons
 				DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcom2SID: Magnet - (unit << 4) | slot, where unit=0x%x, slot=0x%x\n", unit, slot));
 			}
 
-		} else {
-			/* llrf device */
-			sprintf ((char *)rfDevName_ca, "%s:%s:%s:%s", deviceType_ptr,area_ptr, unit_ptr,attrib_ptr);
-			DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcom2SID: Checking for LLRF device %s...\n", (char *) rfDevName_ca ));
-			for (i=0; i<MAX_RFNAMES; i++) {
-				if ( strcmp((char *)(rfname_ca[i]),(char *)rfDevName_ca) == 0 ) {
-	                DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcom2SID: Match found for index %d, device %s...\n", i, (char *) rfname_ca[i] ));
-					/* this is a match for rfName */
-					unsigned long device_mask = FCOM_MASK_SIG_START + i;
-					if (slot_ptr != NULL) {
-						slot = atoi(slot_ptr);
-						if (!(slot < MAX_PAU_SLOTS )) 
-							slot = 0;
-					}	
-					fcomid = (device_mask << MAX_PAU_SLOTS) | slot;
-					DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcom2SID: LLRF - (unique llrf sig id << 4) | slot, where id=0x%lx, slot=%d\n", 
-							device_mask, slot));
-					break;
-				}
-			}
-		}
+		} 
 	}
+	
     if (fcomid !=  FCOM_ID_NONE)
 	  fcomid += FCOM_SID_MIN;
 	if ( (fcomid >= FCOM_SID_MIN) && (fcomid <= FCOM_SID_MAX))
