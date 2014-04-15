@@ -1,3 +1,5 @@
+fcomUtil-R1-1-27: luchini (04/15/2014)
+                  Build against fcom-R1-3-25 with event-R4-1-1
 
 fcomUtil-R1-1-26: lpiccoli (02/20/2014)
                   Build against fcom-R1-3-24 (with updated event module: event-R4-1-0)
