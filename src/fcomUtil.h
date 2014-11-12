@@ -11,6 +11,7 @@
 
   Auth: 10 DEC-2009, drogind created
   Rev:  03 NOV 2010, dfairley removed unused masks
+  		11-Nov-2014, scondam: Added FCOM_MASK_AREA_FB05
 
 -----------------------------------------------------------------------------*/
 #include "copyright_SLAC.h"
@@ -92,6 +93,7 @@ extern "C" {
 #define FCOM_MASK_AREA_FB03              ((unsigned long)0x00000016)
 #define FCOM_MASK_AREA_FB04              ((unsigned long)0x00000017)
 #define FCOM_MASK_AREA_BSY0              ((unsigned long)0x00000018)
+#define FCOM_MASK_AREA_FB05              ((unsigned long)0x00000019)
 
 /* Detectors SID is
 unit # - up 9999 decimal = 0x270F hex = 14 bits       */
