@@ -1,3 +1,6 @@
+fcomUtil-R1-1-30: kim (01/15/2015)
+                  Build against fcom-R1-3-27
+
 fcomUtil-R1-1-29: scondam (11/11/2014)
                   fcomUtil.c -  Added "FB05" to end of 	area_ca[]
 								Bumped up MAX_AREAS to 25.
