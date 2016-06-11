@@ -1,5 +1,10 @@
+fcomUtil-R1-1-37: bhill (06/11/2016)
+                  Built against fcom-R1-3-32 as I need udpComm-R2-7-0
+				  Blob send part of drvFcom implemented and working.
+				  Still need to implement receive blob support.  i.e. fcomGetBlobSet()"
+
 fcomUtil-R1-1-36: scondam (06/10/2016)
-                  Build against fcom-R1-3-33
+                  Build against fcom-R1-3-33 which uses udpComm-R2-5-9-BR-2
 				  
 fcomUtil-R1-1-34: khkim (12/02/2015)
                   Build against fcom-R1-3-31
