@@ -1,0 +1,29 @@
+#
+# Sample substitutions file to simulate a BLEN Blob
+#
+
+# Defines 2 ao records: AIMAX and BIMAX values for each BLEN
+file fcomBlobAo.template
+{
+	pattern
+	{	P,					SIM,		INDEX,		GROUP,			BLOB			}
+	{	"\$(BLOB)AIMAX",	"_SIM",		0,		"\$(GROUP)",	"\$(BLOB)AIMAX"		}
+	{	"\$(BLOB)BIMAX",	"_SIM",		1,		"\$(GROUP)",	"\$(BLOB)BIMAX"		}
+}
+
+# Escape most of the macros so they can keep their
+# defaults and be defined or defaulted later.
+# Defines 2 links for AIMAX and BIMAX for each BLEN
+file fcomBlobSim.template
+{
+	{
+		BLOB	= "\$(BLOB)",
+		GROUP	= "\$(GROUP)",
+		NEXT	= "\$(NEXT=\$(BLOB)ALL_SEND)",
+		SCAN	= "\$(SCAN=Passive)",
+		EC		= "\$(EC=40)",
+		L1		= "\$(BLOB)AIMAX_SIM PP",
+		L2		= "\$(BLOB)BIMAX_SIM PP",
+	}
+}
+

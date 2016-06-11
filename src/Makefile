@@ -19,6 +19,7 @@ INC += fcomLclsLlrf.h
 INC += fcomLclsFFCtrl.h
 
 DBD += fcomUtil.dbd
+DBD += devFcom.dbd
 
 LIBRARY_IOC = fcomUtil
 PROD_IOC = pv2fcid
@@ -26,6 +27,8 @@ PROD_IOC = pv2fcid
 
 fcomUtil_SRCS += fcomUtilRegister.cpp
 fcomUtil_SRCS += fcomUtil.c
+fcomUtil_SRCS += devFcom.c
+fcomUtil_SRCS += drvFcom.c
 fcomUtil_LIBS += fcomBSD
 fcomUtil_LIBS += miscUtils
 fcomUtil_LIBS := $(EPICS_BASE_IOC_LIBS)
@@ -33,6 +36,22 @@ fcomUtil_LIBS := $(EPICS_BASE_IOC_LIBS)
 pv2fcid_SRCS = pv2fcid.c
 pv2fcid_LIBS = fcomUtil
 pv2fcid_LIBS += $(EPICS_BASE_IOC_LIBS)
+#=============================
+# Install the FCOM DTYP templates and samples
+
+DB	+=	fcomBlobAo.template
+DB	+=	fcomBlobAdd.template
+DB	+=	fcomBlobSim.template
+DB	+=	fcomGroupSend.template
+DB	+=	fcomBlobBLEN_SIM.db
+DB	+=	fcomBlobBLEN_SIM.substitutions
+DB	+=	fcomBlobBPMS_SIM.db
+DB	+=	fcomBlobBPMS_SIM.substitutions
+DB	+=	fcomBlobFBCK_SIM.db
+DB	+=	fcomBlobFBCK_SIM.substitutions
+DB	+=	fcomSampleSim.db
+DB	+=	fcomSampleSim.substitutions
+
 #=============================
 
 include $(TOP)/configure/RULES

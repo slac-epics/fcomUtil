@@ -1,0 +1,367 @@
+/*=============================================================================
+
+  Name: devFcom.c
+
+  Abs:  FCOM driver for fcom blob send/receive via db files
+
+  Auth: Bruce Hill (bhill)
+
+  Mod:  ??-Jun-2016 - B.Hill	 - Initial Release
+
+-----------------------------------------------------------------------------*/
+
+#include <string.h>
+#include <stdlib.h>
+
+#include <cantProceed.h>
+#include <epicsAssert.h>
+#include <epicsExport.h>
+#include <dbScan.h>
+#include <dbAccess.h>
+#include <recGbl.h>
+#include <devSup.h>
+#include <errlog.h>
+#include <alarm.h>
+#include <aiRecord.h>
+#include <aoRecord.h>
+#include <biRecord.h>
+#include <boRecord.h>
+#include <longinRecord.h>
+#include <longoutRecord.h>
+#if 0
+#include <epicsMutex.h>
+#endif
+
+#include "fcomUtil.h"
+#include "devFcom.h"
+#include "drvFcom.h"
+#if 0
+#include "debugPrint.h" 	/* For DP_DEBUG */
+extern int	fcomUtilFlag;
+#endif
+
+int 	DEBUG_DEV_FCOM_RECV = 2;
+int 	DEBUG_DEV_FCOM_SEND = 2;
+epicsExportAddress(int, DEBUG_DEV_FCOM_RECV);
+epicsExportAddress(int, DEBUG_DEV_FCOM_SEND);
+
+
+typedef struct	devFcomPvt
+{
+	int				iGroup;
+	int				iSet;
+	int				iValue;
+	FcomID			blobId;
+	const char	*	pParamName;
+	dbCommon	*	pRecord;
+}	devFcomPvt;
+
+/**********************************************************************
+ * aiRecord device support functions
+ **********************************************************************/
+static long init_ai( struct aiRecord * pai)
+{
+    pai->dpvt = NULL;
+
+    if (pai->inp.type!=VME_IO)
+    {
+        recGblRecordError(S_db_badField, (void *)pai, "devFcom init_ai, Illegal INP");
+        pai->pact=TRUE;
+        return (S_db_badField);
+    }
+
+	if ( 1 )
+		return( 0 );
+
+	recGblRecordError(S_db_badField, (void *) pai, "devFcom init_ai, bad parameters");
+	pai->pact = TRUE;
+
+	return (S_db_badField);
+}
+
+/** for sync scan records  **/
+static long ai_ioint_info( int	cmd, aiRecord	*	pai, IOSCANPVT	*	iopvt )
+{
+/*	unsigned	int		iSet	= 0; */
+
+/*	*iopvt = drvFcomGetSetIoScan( iSet ); */
+	return 0;
+}
+
+static long read_ai(struct aiRecord *pai)
+{
+	int damage = 0;
+
+	/* long int	tyData = (long int) pai->dpvt; */
+
+	pai->val = 0.0;
+
+	if(pai->tse == epicsTimeEventDeviceTime)
+	{
+	/* do timestamp by device support */
+	#if 0
+	pai->time.secPastEpoch = __ld_le32(&devFcomEbeamInfo.ts_sec);
+	pai->time.nsec         = __ld_le32(&devFcomEbeamInfo.ts_nsec);
+	#endif
+	}
+
+	if (damage)
+	{
+	recGblSetSevr(pai, CALC_ALARM, INVALID_ALARM);
+	}
+
+	pai->udf=FALSE;
+
+	return 2;
+}
+
+/**********************************************************************
+ * aoRecord device support functions
+ **********************************************************************/
+static long init_ao( struct aoRecord * pao)
+{
+	FcomID				blobId;
+	devFcomPvt		*	pDevPvt;
+	struct vmeio	*	pVmeIo;
+	int					status;
+
+    if (pao->out.type!=VME_IO)
+    {
+        recGblRecordError(S_db_badField, (void *)pao, "devFcom init_ao, Illegal OUT");
+        pao->pact=TRUE;
+        return (S_db_badField);
+    }
+
+	pVmeIo		= &pao->out.value.vmeio;
+	blobId		= fcomLCLSPV2FcomID( pVmeIo->parm );
+
+	if ( blobId == FCOM_ID_NONE )
+	{
+		recGblRecordError(S_db_badField, (void *) pao, "devFcom init_ao, bad parameters");
+		pao->pact = TRUE;
+		return (S_db_badField);
+	}
+
+	pDevPvt	= (devFcomPvt *) callocMustSucceed( 1, sizeof(devFcomPvt), "devFcom init_ao" );
+	pDevPvt->iValue		= pVmeIo->card;
+	pDevPvt->iGroup		= pVmeIo->signal;
+	pDevPvt->iSet		= -1;
+	pDevPvt->blobId		= blobId;
+	pDevPvt->pParamName	= pVmeIo->parm;
+	pDevPvt->pRecord	= (dbCommon *) pao;
+    pao->dpvt			= pDevPvt;
+
+	if ( DEBUG_DEV_FCOM_SEND >= 1 )
+		printf( "init_ao %s: Group %u, Blob "FCOM_ID_FMT"\n", pao->name, pDevPvt->iGroup, pDevPvt->blobId );
+
+	status = drvFcomInitGroupBlob( pDevPvt->iGroup, pDevPvt->blobId, FCOM_EL_DOUBLE, pDevPvt->pParamName );
+	if ( status != 0 )
+		errlogPrintf( "init_ao Error %s: Group %d, Blob "FCOM_ID_FMT", %s\n", pao->name, pDevPvt->iGroup, pDevPvt->blobId, fcomStrerror(status) );
+
+	return( 0 );
+}
+
+/** for sync scan records  **/
+static long ao_ioint_info( int	cmd, aoRecord	*	pao, IOSCANPVT	*	iopvt )
+{
+	devFcomPvt	*	pDevPvt	= (devFcomPvt *) pao->dpvt;
+
+	if ( DEBUG_DEV_FCOM_SEND >= 2 )
+		printf( "ao_ioint_info %s: Group %u, Blob "FCOM_ID_FMT"\n", pao->name, pDevPvt->iGroup, pDevPvt->blobId );
+
+	if ( pDevPvt == NULL )
+		return 0;
+
+	*iopvt = drvFcomGetGroupIoScan( pDevPvt->iGroup );
+	return 0;
+}
+
+static long write_ao(struct aoRecord *pao)
+{
+	long			status	= 0;
+	int				fid		= 0x1FFFF;
+	devFcomPvt	*	pDevPvt	= (devFcomPvt *) pao->dpvt;
+	if ( pDevPvt == NULL )
+		return 0;
+
+	recGblGetTimeStamp( pao );
+	fid = pao->time.nsec & 0x1FFFF;
+
+	if ( DEBUG_DEV_FCOM_SEND >= 3 )
+		printf( "write_ao %s: Group %u, Blob "FCOM_ID_FMT", Value %f, fid %d\n", pao->name, pDevPvt->iGroup, pDevPvt->blobId, pao->val, fid );
+
+	status = drvFcomUpdateGroupBlobDouble(	pDevPvt->iGroup, pDevPvt->blobId,
+											pDevPvt->iValue, pao->val, &pao->time );\
+	if ( status != 0 )
+		errlogPrintf( "write_ao Error %s: Group %d, Blob "FCOM_ID_FMT", %s\n", pao->name, pDevPvt->iGroup, pDevPvt->blobId, fcomStrerror(status) );
+	return status;
+}
+
+/**********************************************************************
+ * boRecord device support functions
+ **********************************************************************/
+static long init_bo( struct boRecord * pbo)
+{
+	FcomID				blobId	= FCOM_ID_NONE;
+	devFcomPvt		*	pDevPvt;
+	struct vmeio	*	pVmeIo;
+
+    if (pbo->out.type!=VME_IO)
+    {
+        recGblRecordError(S_db_badField, (void *)pbo, "devFcom init_bo, Illegal OUT");
+        pbo->pact=TRUE;
+        return (S_db_badField);
+    }
+
+	pVmeIo		= &pbo->out.value.vmeio;
+	if ( strcmp( pVmeIo->parm, "SEND" ) == 0 )
+	{
+		/* All we need is a group number for a boRecord SEND */
+	}
+	else
+	{
+		blobId		= fcomLCLSPV2FcomID( pVmeIo->parm );
+		if ( blobId == FCOM_ID_NONE )
+		{
+			{
+				recGblRecordError(S_db_badField, (void *) pbo, "devFcom init_bo, bad parameters");
+				pbo->pact = TRUE;
+				return (S_db_badField);
+			}
+		}
+	}
+
+	pDevPvt	= (devFcomPvt *) callocMustSucceed( 1, sizeof(devFcomPvt), "devFcom init_bo" );
+	pDevPvt->iValue		= pVmeIo->card;
+	pDevPvt->iGroup		= pVmeIo->signal;
+	pDevPvt->iSet		= -1;
+	pDevPvt->blobId		= blobId;
+	pDevPvt->pParamName	= pVmeIo->parm;
+	pDevPvt->pRecord	= (dbCommon *) pbo;
+    pbo->dpvt			= pDevPvt;
+
+	if ( DEBUG_DEV_FCOM_SEND >= 1 )
+		printf( "init_bo %s: Group %u, Blob "FCOM_ID_FMT", param %s\n", pbo->name, pDevPvt->iGroup, pDevPvt->blobId, pDevPvt->pParamName );
+
+	return( 0 );
+}
+
+static long write_bo(struct boRecord *pbo)
+{
+	long			status	= 0;
+	devFcomPvt	*	pDevPvt	= (devFcomPvt *) pbo->dpvt;
+
+	if ( pDevPvt == NULL )
+		return 0;
+
+	if ( pDevPvt->blobId != FCOM_ID_NONE )
+	{
+		if ( DEBUG_DEV_FCOM_SEND >= 3 )
+			printf( "write_bo %s: Group %u, Write Blob "FCOM_ID_FMT"\n", pbo->name, pDevPvt->iGroup, pDevPvt->blobId );
+
+		status = drvFcomWriteBlobToGroup(	pDevPvt->iGroup, pDevPvt->blobId );
+	}
+	else if ( strcmp( pDevPvt->pParamName, "SEND" ) == 0 )
+	{
+		if ( DEBUG_DEV_FCOM_SEND >= 3 )
+			printf( "write_bo %s: Sending Group %u ...\n", pbo->name, pDevPvt->iGroup );
+
+		status = drvFcomPutGroup(	pDevPvt->iGroup );
+	}
+	else
+	{
+		printf( "write_bo %s Error: Invalid paramName %s!\n", pbo->name, pDevPvt->pParamName );
+	}
+	if ( status != 0 )
+		errlogPrintf(	"write_bo Error %s: Group %d, Blob "FCOM_ID_FMT", %s\n",
+						pbo->name, pDevPvt->iGroup, pDevPvt->blobId, fcomStrerror(status) );
+
+	return status;
+}
+
+/************************************************************
+ * Register device support functions
+ ************************************************************/
+struct DEV_FCOM_AI_DSET
+{
+	long		number;
+	DEVSUPFUN	dev_report;
+	DEVSUPFUN	init;
+	DEVSUPFUN	init_ai;
+	DEVSUPFUN	ai_ioint_info;
+	DEVSUPFUN	read_ai;
+	DEVSUPFUN	special_linconv;
+};
+struct DEV_FCOM_AI_DSET devAiFcom	=
+{
+	6,
+	NULL,
+	NULL,
+	init_ai,
+	ai_ioint_info,
+	read_ai,
+	NULL
+};
+epicsExportAddress( dset, devAiFcom );
+
+struct DEV_FCOM_AO_DSET
+{
+	long		number;
+	DEVSUPFUN	dev_report;
+	DEVSUPFUN	init;
+	DEVSUPFUN	init_ao;
+	DEVSUPFUN	ao_ioint_info;
+	DEVSUPFUN	write_ao;
+	DEVSUPFUN	special_linconv;
+};
+struct DEV_FCOM_AO_DSET devAoFcom	=
+{
+	6,
+	NULL,
+	NULL,
+	init_ao,
+	ao_ioint_info,
+	write_ao,
+	NULL
+};
+epicsExportAddress( dset, devAoFcom );
+
+struct DEV_FCOM_BO_DSET
+{
+	long		number;
+	DEVSUPFUN	dev_report;
+	DEVSUPFUN	init;
+	DEVSUPFUN	init_bo;
+	DEVSUPFUN	bo_ioint_info;
+	DEVSUPFUN	write_bo;
+};
+struct DEV_FCOM_BO_DSET devBoFcom	=
+{
+	5,
+	NULL,
+	NULL,
+	init_bo,
+	NULL,
+	write_bo
+};
+epicsExportAddress( dset, devBoFcom );
+
+#if 0
+#include <subRecord.h>
+#include <registryFunction.h>
+
+long subInit(struct subRecord *psub)
+{
+  errlogPrintf("subInit was called\n");
+  return 0;
+}
+
+long subProcess(struct subRecord *psub)
+{
+  psub->val = (int)(psub->time.nsec & 0x1FFFF);
+  return 0;
+}
+
+epicsRegisterFunction(subInit);
+epicsRegisterFunction(subProcess);
+#endif

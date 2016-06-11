@@ -1,0 +1,66 @@
+# A template that can be used to update one or more
+# blob output records, add them to a group, and send them.
+
+record( calc, "$(BLOB)SIM_SIN" )
+{
+	field( CALC, "sin(a); a:=a+d2r" )
+	field( SCAN, "$(SCAN=Passive)" )
+	field( EVNT, "$(EC=40)" )
+	field( PREC, "5" )
+	field( FLNK, "$(BLOB)SIM_COS" )
+}
+
+record( calc, "$(BLOB)SIM_COS" )
+{
+	field( CALC, "cos(a); a:=a+d2r" )
+	field( PREC, "5" )
+	field( FLNK, "$(BLOB)SIM_SEQ" )
+}
+
+record( seq, "$(BLOB)SIM_SEQ" )
+{
+	field( DOL1, "$(BLOB)SIM_SIN" )
+	field( LNK1, "$(L1=)" )
+
+	field( DOL2, "$(BLOB)SIM_COS" )
+	field( LNK2, "$(L2=)" )
+
+	field( DOL3, "$(BLOB)SIM_SIN" )
+	field( LNK3, "$(L3=)" )
+
+	field( DOL4, "$(BLOB)SIM_COS" )
+	field( LNK4, "$(L4=)" )
+
+	field( DOL5, "$(BLOB)SIM_SIN" )
+	field( LNK5, "$(L5=)" )
+
+	field( DOL6, "$(BLOB)SIM_COS" )
+	field( LNK6, "$(L6=)" )
+
+	field( DOL7, "$(BLOB)SIM_SIN" )
+	field( LNK7, "$(L7=)" )
+
+	field( DOL8, "$(BLOB)SIM_COS" )
+	field( LNK8, "$(L8=)" )
+
+	field( DOL9, "$(BLOB)SIM_SIN" )
+	field( LNK9, "$(L9=)" )
+
+	field( DOLA, "$(BLOB)SIM_COS" )
+	field( LNKA, "$(L10=)" )
+
+	field( FLNK, "$(BLOB)ALL_ADD" )
+}
+
+# This record adds (writes) the blob to the fcom group
+record( bo, "$(BLOB)ALL_ADD" )
+{
+	field( TSE,  "$(EC=40)" )
+	field( DTYP, "FCOM" )
+	field( ZNAM, "Wait" )
+	field( ONAM, "Add" )
+	field( OUT,  "#C0S$(GROUP)@$(BLOB)ALL_ADD" )
+	field( HIGH, "0.0001" )
+	field( FLNK, "$(NEXT=$(BLOB)ALL_SEND)" )
+	info( autosaveFields, "OSV ZSV DESC" )
+}

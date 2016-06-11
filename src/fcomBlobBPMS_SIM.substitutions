@@ -1,0 +1,31 @@
+#
+# Sample substitutions file to simulate a BPMS Blob
+#
+
+# Defines 3 ao records: X, Y, and T values for each BPM
+file fcomBlobAo.template
+{
+	pattern
+	{	P,				SIM,		INDEX,		GROUP,			BLOB		}
+	{	"\$(BLOB)X",	"_SIM",		0,		"\$(GROUP)",	"\$(BLOB)X"		}
+	{	"\$(BLOB)Y",	"_SIM",		1,		"\$(GROUP)",	"\$(BLOB)Y"		}
+	{	"\$(BLOB)T",	"_SIM",		2,		"\$(GROUP)",	"\$(BLOB)T"		}
+}
+
+# Escape most of the macros so they can keep their
+# defaults and be defined or defaulted later.
+# Defines 3 links for X, Y, and T values for each BPM
+file fcomBlobSim.template
+{
+	{
+		BLOB	= "\$(BLOB)",
+		GROUP	= "\$(GROUP)",
+		NEXT	= "\$(NEXT=\$(BLOB)ALL_SEND)",
+		SCAN	= "\$(SCAN=Passive)",
+		EC		= "\$(EC=40)",
+		L1		= "\$(BLOB)X_SIM PP",
+		L2		= "\$(BLOB)Y_SIM PP",
+		L3		= "\$(BLOB)T_SIM PP",
+	}
+}
+

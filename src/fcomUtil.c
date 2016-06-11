@@ -592,8 +592,10 @@ void fcomUtilGetFcomID (const char * pvNameString)
   DEBUGPRINT(DP_DEBUG,fcomUtilFlag, ("fcomUtilGetFcomID reached for pv name=%s \n", pvNameString));
  
   fcomid = fcomLCLSPV2FcomID (pvNameString );
-  if (fcomid > FCOM_ID_NONE)
-          printf ("FcomID=0x%lx for signal=%s\n", (unsigned long) fcomid, pvNameString);
+  if (fcomid > FCOM_ID_NONE) {
+          printf ("Fcom  ID=0x%lx for signal=%s\n", (unsigned long) fcomid, pvNameString);
+          printf ("Fcom GID=0x%lx, SID=0x%lx\n", (unsigned long) FCOM_GET_GID(fcomid), (unsigned long) FCOM_GET_SID(fcomid));
+  }
   else printf ("No FcomID found, sorry \n");
   
 }

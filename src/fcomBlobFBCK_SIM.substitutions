@@ -1,0 +1,45 @@
+#
+# Sample substitutions file to simulate a FBCK Blob
+#
+
+# Defines 10 ao records for each FBCK
+file fcomBlobAo.template
+{
+	pattern
+	{	P,					SIM,		INDEX,		GROUP,			BLOB			}
+	{	"\$(BLOB)STATE0",	"_SIM",		0,		"\$(GROUP)",	"\$(BLOB)STATE0"	}
+	{	"\$(BLOB)STATE1",	"_SIM",		1,		"\$(GROUP)",	"\$(BLOB)STATE1"	}
+	{	"\$(BLOB)STATE2",	"_SIM",		2,		"\$(GROUP)",	"\$(BLOB)STATE2"	}
+	{	"\$(BLOB)STATE3",	"_SIM",		3,		"\$(GROUP)",	"\$(BLOB)STATE3"	}
+	{	"\$(BLOB)STATE4",	"_SIM",		4,		"\$(GROUP)",	"\$(BLOB)STATE4"	}
+	{	"\$(BLOB)STATE5",	"_SIM",		5,		"\$(GROUP)",	"\$(BLOB)STATE5"	}
+	{	"\$(BLOB)STATE6",	"_SIM",		6,		"\$(GROUP)",	"\$(BLOB)STATE6"	}
+	{	"\$(BLOB)STATE7",	"_SIM",		7,		"\$(GROUP)",	"\$(BLOB)STATE7"	}
+	{	"\$(BLOB)STATE8",	"_SIM",		8,		"\$(GROUP)",	"\$(BLOB)STATE8"	}
+	{	"\$(BLOB)STATE9",	"_SIM",		9,		"\$(GROUP)",	"\$(BLOB)STATE9"	}
+}
+
+# Escape most of the macros so they can keep their
+# defaults and be defined or defaulted later.
+# Defines 10 links for the state value in each FBCK blob
+file fcomBlobSim.template
+{
+	{
+		BLOB	= "\$(BLOB)",
+		GROUP	= "\$(GROUP)",
+		NEXT	= "\$(NEXT=\$(BLOB)ALL_SEND)",
+		SCAN	= "\$(SCAN=Passive)",
+		EC		= "\$(EC=40)",
+		L1		= "\$(BLOB)STATE0_SIM PP",
+		L2		= "\$(BLOB)STATE1_SIM PP",
+		L3		= "\$(BLOB)STATE2_SIM PP",
+		L4		= "\$(BLOB)STATE3_SIM PP",
+		L5		= "\$(BLOB)STATE4_SIM PP",
+		L6		= "\$(BLOB)STATE5_SIM PP",
+		L7		= "\$(BLOB)STATE6_SIM PP",
+		L8		= "\$(BLOB)STATE7_SIM PP",
+		L9		= "\$(BLOB)STATE8_SIM PP",
+		L10		= "\$(BLOB)STATE9_SIM PP",
+	}
+}
+
