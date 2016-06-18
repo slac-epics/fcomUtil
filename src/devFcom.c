@@ -6,16 +6,19 @@
 
   Auth: Bruce Hill (bhill)
 
-  Mod:  ??-Jun-2016 - B.Hill	 - Initial Release
+  Mod:  13-Jun-2016 - B.Hill	- Initial support for writing fcom blobs
+  		15-Jun-2016 - B.Hill	- Adding support for reading fcom blobs 
 
 -----------------------------------------------------------------------------*/
 
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <cantProceed.h>
 #include <epicsAssert.h>
 #include <epicsExport.h>
+#include <epicsMath.h>
 #include <dbScan.h>
 #include <dbAccess.h>
 #include <recGbl.h>
@@ -61,59 +64,114 @@ typedef struct	devFcomPvt
  **********************************************************************/
 static long init_ai( struct aiRecord * pai)
 {
-    pai->dpvt = NULL;
+	FcomID				blobId;
+	devFcomPvt		*	pDevPvt;
+	struct vmeio	*	pVmeIo;
+	int					status;
 
-    if (pai->inp.type!=VME_IO)
+    pai->dpvt = NULL;
+    if ( pai->inp.type!=VME_IO )
     {
         recGblRecordError(S_db_badField, (void *)pai, "devFcom init_ai, Illegal INP");
         pai->pact=TRUE;
         return (S_db_badField);
     }
 
-	if ( 1 )
-		return( 0 );
+	pVmeIo		= &pai->inp.value.vmeio;
+	blobId		= fcomLCLSPV2FcomID( pVmeIo->parm );
 
-	recGblRecordError(S_db_badField, (void *) pai, "devFcom init_ai, bad parameters");
-	pai->pact = TRUE;
+	if ( blobId == FCOM_ID_NONE )
+	{
+		errlogPrintf( "init_ai Error %s: Invalid Blob name %s!\n", pai->name, pVmeIo->parm );
+		recGblRecordError(S_db_badField, (void *) pai, "devFcom init_ai, bad parameters");
+		pai->pact = TRUE;
+		return (S_db_badField);
+	}
 
-	return (S_db_badField);
+	pDevPvt	= (devFcomPvt *) callocMustSucceed( 1, sizeof(devFcomPvt), "devFcom init_ai" );
+	pDevPvt->iValue		= pVmeIo->card;
+	pDevPvt->iGroup		= -1;
+	pDevPvt->iSet		= pVmeIo->signal;
+	pDevPvt->blobId		= blobId;
+	pDevPvt->pParamName	= pVmeIo->parm;
+	pDevPvt->pRecord	= (dbCommon *) pai;
+    pai->dpvt			= pDevPvt;
+
+	if ( DEBUG_DEV_FCOM_RECV >= 1 )
+		printf( "init_ai %s: Set %u, Blob "FCOM_ID_FMT"\n", pai->name, pDevPvt->iSet, pDevPvt->blobId );
+
+	status = drvFcomAddBlobToSet( pDevPvt->iSet, pDevPvt->blobId, pDevPvt->pParamName );
+	if ( status != 0 )
+		errlogPrintf( "init_ai Error %s: Set %d, Blob "FCOM_ID_FMT", %s\n", pai->name, pDevPvt->iSet, pDevPvt->blobId, fcomStrerror(status) );
+
+	return( 0 );
 }
 
 /** for sync scan records  **/
 static long ai_ioint_info( int	cmd, aiRecord	*	pai, IOSCANPVT	*	iopvt )
 {
-/*	unsigned	int		iSet	= 0; */
+	devFcomPvt	*	pDevPvt	= (devFcomPvt *) pai->dpvt;
 
-/*	*iopvt = drvFcomGetSetIoScan( iSet ); */
+	if ( DEBUG_DEV_FCOM_RECV >= 2 )
+		printf( "ai_ioint_info %s: Set %u, Blob "FCOM_ID_FMT"\n", pai->name, pDevPvt->iSet, pDevPvt->blobId );
+
+	if ( pDevPvt == NULL )
+		return 0;
+
+	*iopvt = drvFcomGetSetIoScan( pDevPvt->iSet );
 	return 0;
 }
 
 static long read_ai(struct aiRecord *pai)
 {
-	int damage = 0;
+	long			status;
+	int				fid		= 0x1FFFF;
+	FcomBlob	*	pBlob	= NULL;
+	devFcomPvt	*	pDevPvt	= (devFcomPvt *) pai->dpvt;
+	if ( pDevPvt == NULL )
+		return 0;
 
-	/* long int	tyData = (long int) pai->dpvt; */
-
-	pai->val = 0.0;
-
-	if(pai->tse == epicsTimeEventDeviceTime)
+	status = fcomGetBlob( pDevPvt->blobId, &pBlob, 0 );
+	if (	status != 0
+		||	pBlob == NULL
+		||	pBlob->fc_nelm <= pDevPvt->iValue
+		||	(	pBlob->fc_type != FCOM_EL_DOUBLE
+			&&	pBlob->fc_type != FCOM_EL_FLOAT	) )
 	{
-	/* do timestamp by device support */
-	#if 0
-	pai->time.secPastEpoch = __ld_le32(&devFcomEbeamInfo.ts_sec);
-	pai->time.nsec         = __ld_le32(&devFcomEbeamInfo.ts_nsec);
-	#endif
+		if ( pBlob )
+			fcomReleaseBlob( &pBlob );
+		recGblSetSevr( pai, CALC_ALARM, INVALID_ALARM );
+		pai->udf	= TRUE;
+		pai->val	= epicsNAN;
+		return 2;
 	}
 
-	if (damage)
+	if ( pBlob->fc_type == FCOM_EL_DOUBLE )
+		pai->val = pBlob->fc_dbl[ pDevPvt->iValue ];
+	else
+		pai->val = pBlob->fc_flt[ pDevPvt->iValue ];
+
+	if ( pai->tse == epicsTimeEventDeviceTime )
 	{
-	recGblSetSevr(pai, CALC_ALARM, INVALID_ALARM);
+		/* do timestamp by device support */
+		pai->time.secPastEpoch = pBlob->fc_tsHi;
+		pai->time.nsec         = pBlob->fc_tsLo;
+	}
+	else
+	{
+		recGblGetTimeStamp( pai );
 	}
 
-	pai->udf=FALSE;
+	fcomReleaseBlob( &pBlob );
+	fid			= pai->time.nsec & 0x1FFFF;
+	pai->udf	= FALSE;
+
+	if ( DEBUG_DEV_FCOM_RECV >= 3 )
+		printf( "read_ai  %s: Set %u, Blob "FCOM_ID_FMT", Value %f, fid %d\n", pai->name, pDevPvt->iSet, pDevPvt->blobId, pai->val, fid );
 
 	return 2;
 }
+
 
 /**********************************************************************
  * aoRecord device support functions
@@ -137,6 +195,7 @@ static long init_ao( struct aoRecord * pao)
 
 	if ( blobId == FCOM_ID_NONE )
 	{
+		errlogPrintf( "init_ao Error %s: Invalid Blob name %s!\n", pao->name, pVmeIo->parm );
 		recGblRecordError(S_db_badField, (void *) pao, "devFcom init_ao, bad parameters");
 		pao->pact = TRUE;
 		return (S_db_badField);
@@ -187,14 +246,19 @@ static long write_ao(struct aoRecord *pao)
 	recGblGetTimeStamp( pao );
 	fid = pao->time.nsec & 0x1FFFF;
 
+	if ( DEBUG_DEV_FCOM_SEND >= 2 && (fid % 3) != 0 ) 
+		printf( "write_ao %s: Group %u, Blob "FCOM_ID_FMT", Value %f, fid %d mod 3 = %d!\n", pao->name, pDevPvt->iGroup, pDevPvt->blobId, pao->val, fid, fid % 3 );
 	if ( DEBUG_DEV_FCOM_SEND >= 3 )
 		printf( "write_ao %s: Group %u, Blob "FCOM_ID_FMT", Value %f, fid %d\n", pao->name, pDevPvt->iGroup, pDevPvt->blobId, pao->val, fid );
 
 	status = drvFcomUpdateGroupBlobDouble(	pDevPvt->iGroup, pDevPvt->blobId,
 											pDevPvt->iValue, pao->val, &pao->time );\
 	if ( status != 0 )
+	{
 		errlogPrintf( "write_ao Error %s: Group %d, Blob "FCOM_ID_FMT", %s\n", pao->name, pDevPvt->iGroup, pDevPvt->blobId, fcomStrerror(status) );
-	return status;
+		recGblSetSevr( pao, CALC_ALARM, INVALID_ALARM );
+	}
+	return 0;
 }
 
 /**********************************************************************
@@ -205,6 +269,8 @@ static long init_bo( struct boRecord * pbo)
 	FcomID				blobId	= FCOM_ID_NONE;
 	devFcomPvt		*	pDevPvt;
 	struct vmeio	*	pVmeIo;
+	int					iGroup	= -1;
+	int					iSet	= -1;
 
     if (pbo->out.type!=VME_IO)
     {
@@ -216,32 +282,48 @@ static long init_bo( struct boRecord * pbo)
 	pVmeIo		= &pbo->out.value.vmeio;
 	if ( strcmp( pVmeIo->parm, "SEND" ) == 0 )
 	{
-		/* All we need is a group number for a boRecord SEND */
+		/* All we need is a group number for a SEND boRecord */
+		iGroup		= pVmeIo->signal;
+	}
+	else if ( strcmp( pVmeIo->parm, "SYNC" ) == 0 )
+	{
+		/* All we need is a set number for a SYNC boRecord */
+		iSet		= pVmeIo->signal;
 	}
 	else
 	{
 		blobId		= fcomLCLSPV2FcomID( pVmeIo->parm );
 		if ( blobId == FCOM_ID_NONE )
 		{
-			{
-				recGblRecordError(S_db_badField, (void *) pbo, "devFcom init_bo, bad parameters");
-				pbo->pact = TRUE;
-				return (S_db_badField);
-			}
+			errlogPrintf( "init_bo Error %s: Invalid Blob name %s!\n", pbo->name, pVmeIo->parm );
+			recGblRecordError(S_db_badField, (void *) pbo, "devFcom init_bo, bad parameters");
+			pbo->pact = TRUE;
+			return (S_db_badField);
 		}
+		iGroup		= pVmeIo->signal;
 	}
 
 	pDevPvt	= (devFcomPvt *) callocMustSucceed( 1, sizeof(devFcomPvt), "devFcom init_bo" );
 	pDevPvt->iValue		= pVmeIo->card;
-	pDevPvt->iGroup		= pVmeIo->signal;
-	pDevPvt->iSet		= -1;
+	pDevPvt->iGroup		= iGroup;
+	pDevPvt->iSet		= iSet;
 	pDevPvt->blobId		= blobId;
 	pDevPvt->pParamName	= pVmeIo->parm;
 	pDevPvt->pRecord	= (dbCommon *) pbo;
     pbo->dpvt			= pDevPvt;
 
-	if ( DEBUG_DEV_FCOM_SEND >= 1 )
-		printf( "init_bo %s: Group %u, Blob "FCOM_ID_FMT", param %s\n", pbo->name, pDevPvt->iGroup, pDevPvt->blobId, pDevPvt->pParamName );
+	if ( pDevPvt->iGroup >= 0 && DEBUG_DEV_FCOM_SEND >= 1 )
+		{
+		if ( blobId != FCOM_ID_NONE )
+			printf( "init_bo %s: Group %u, Blob "FCOM_ID_FMT", param %s\n", pbo->name,
+					pDevPvt->iGroup, pDevPvt->blobId, pDevPvt->pParamName );
+		else
+			printf( "init_bo %s: Group %u, param %s\n", pbo->name,
+					pDevPvt->iGroup, pDevPvt->pParamName );
+		}
+	if ( pDevPvt->iSet >= 0 && DEBUG_DEV_FCOM_RECV >= 1 )
+		printf( "init_bo %s: Set   %u, param %s\n", pbo->name,
+				pDevPvt->iSet, pDevPvt->pParamName );
 
 	return( 0 );
 }
@@ -256,25 +338,37 @@ static long write_bo(struct boRecord *pbo)
 
 	if ( pDevPvt->blobId != FCOM_ID_NONE )
 	{
-		if ( DEBUG_DEV_FCOM_SEND >= 3 )
+		if ( DEBUG_DEV_FCOM_SEND >= 4 )
 			printf( "write_bo %s: Group %u, Write Blob "FCOM_ID_FMT"\n", pbo->name, pDevPvt->iGroup, pDevPvt->blobId );
 
 		status = drvFcomWriteBlobToGroup(	pDevPvt->iGroup, pDevPvt->blobId );
 	}
 	else if ( strcmp( pDevPvt->pParamName, "SEND" ) == 0 )
 	{
-		if ( DEBUG_DEV_FCOM_SEND >= 3 )
+		if ( DEBUG_DEV_FCOM_SEND >= 4 )
 			printf( "write_bo %s: Sending Group %u ...\n", pbo->name, pDevPvt->iGroup );
 
 		status = drvFcomPutGroup(	pDevPvt->iGroup );
+	}
+	else if ( strcmp( pDevPvt->pParamName, "SYNC" ) == 0 )
+	{
+		if ( DEBUG_DEV_FCOM_RECV >= 4 )
+			printf( "write_bo %s: Syncing Set %u ...\n", pbo->name, pDevPvt->iSet );
+
+		drvFcomSignalSet( pDevPvt->iSet );
 	}
 	else
 	{
 		printf( "write_bo %s Error: Invalid paramName %s!\n", pbo->name, pDevPvt->pParamName );
 	}
+
 	if ( status != 0 )
-		errlogPrintf(	"write_bo Error %s: Group %d, Blob "FCOM_ID_FMT", %s\n",
-						pbo->name, pDevPvt->iGroup, pDevPvt->blobId, fcomStrerror(status) );
+		errlogPrintf(	"write_bo Error %s: %s %d, Blob "FCOM_ID_FMT", %s: %s\n",
+						pbo->name,
+						( pDevPvt->iGroup >= 0 ? "Group" : "Set" ),
+						( pDevPvt->iGroup >= 0 ? pDevPvt->iGroup : pDevPvt->iSet ),
+						pDevPvt->blobId, pDevPvt->pParamName,
+						fcomStrerror(status) );
 
 	return status;
 }

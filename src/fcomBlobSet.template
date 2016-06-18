@@ -1,0 +1,33 @@
+# Template for FCOM sets
+#
+# Required macros:
+#	BLOB	- Use any BLOB from the set
+#	SET		- Set number, 0 through max (currently 20, could be increased)
+
+# drvFcom needs each set's processing thread to be
+# synchronized w/ the beam fiducial.
+# This determines when the thread calls fcomGetBlobSet(),
+# and implicitly when the call times out.
+#
+# If you need the earliest possible call to fcomGetBlobSet(),
+# register a 360hz EVR callback function w/ evrTimeRegister()
+# and call drvFcomSignalSet(iSet) from your callback as needed.
+# To avoid erroneous synchronization, set SYNC to PASSIVE
+#
+# For less crucial applications, let SYNC and EC default
+# to processing on event code 40 and this record will
+# synchronize the set thread.
+# You can also set EC to other event codes as needed.
+record( bo, "$(BLOB)_SET_SYNC" )
+{
+	field( SCAN, "$(SYNC=Event)" )
+	field( EVNT, "$(EC=40)" )
+	field( TSE,  "$(EC=40)" )
+	field( DTYP, "FCOM" )
+	field( ZNAM, "SYNC" )
+	field( ONAM, "Sync" )
+#	field( HIGH, "0.0001" )
+	field( OUT,  "#C0S$(SET)@SYNC" )
+	field( FLNK, "$(FLNK=)" )
+	info( autosaveFields, "OSV ZSV DESC" )
+}

@@ -15,6 +15,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <errno.h>
+#include <math.h>
 #include <unistd.h>
 
 #if 0
@@ -64,56 +65,68 @@ extern int	fcomUtilFlag;
 
 #define FCOM_DRV_VERSION "FCOM driver $Revision: 1.1 $/$Name:  $"
 
-#define CA_PRIORITY     CA_PRIORITY_MAX         /* Highest CA priority */
 
 #define TASK_PRIORITY   epicsThreadPriorityMax  /* Highest EPICS thread priority */
 
-#define DEFAULT_CA_TIMEOUT	0.04		/* Default CA timeout, for 30Hz */
-#define DEFAULT_EVR_TIMEOUT	0.2		/* Default EVR event timeout, for 30Hz */
+#define DEFAULT_SET_TIMEOUT	0.007		/* Default set timeout */
 
 #ifndef PULSEID
 #define	PULSEID_INVALID		(0x1FFFF)
 #define PULSEID(time)		((time).nsec & PULSEID_INVALID)
 #endif	/* PULSEID */
-#if 0
-#ifndef FID_DIFF
-/*
- *  A few fiducial helper definitions.
- *  FID_ROLL(a, b) is true if we have rolled over from fiducial a to fiducial b.  (That is, a
- *  is large, and b is small.)
- *  FID_GT(a, b) is true if fiducial a is greater than fiducial b, accounting for rollovers.
- *  FID_DIFF(a, b) is the difference between two fiducials, accounting for rollovers.
- */
-#define FID_MAX        0x1ffe0
-#define FID_ROLL_LO    0x00200
-#define FID_ROLL_HI    (FID_MAX-FID_ROLL_LO)
-#define FID_ROLL(a,b)  ((b) < FID_ROLL_LO && (a) > FID_ROLL_HI)
-#define FID_GT(a,b)    (FID_ROLL(b, a) || ((a) > (b) && !FID_ROLL(a, b)))
-#define FID_DIFF(a,b)  ((FID_ROLL(b, a) ? FID_MAX : 0) + (int)(a) - (int)(b) - (FID_ROLL(a, b) ? FID_MAX : 0))
-#endif	/* FID_DIFF */
-#endif
 
 /* FcomID fcomBlobIDs[N_PULSE_BLOBS] = { 0 }; */
 
 /* FcomBlobSetRef  fcomBlobSet = 0; */
 
-typedef	struct	_drvBlob
+typedef	struct	grpBlob
 {
-	FcomBlob		blob;		/* FCom Blob to manage */
+	FcomBlob		blob;		/* Fcom Blob to manage */
 	size_t			nAlloc;		/* Number of values in currently allocated data block */
 	const char	*	name;		/* Original blob name */
-}	drvBlob;
+}	grpBlob;
 
-typedef	struct	_drvGroup
+typedef	struct	drvGroup
 {
 	FcomGroup		groupHandle;
 	int				nBlobsAdded;
 	IOSCANPVT		IoScan;
-	drvBlob			txBlobs[N_DRV_FCOM_BLOBS_MAX];
+	grpBlob			txBlobs[N_DRV_FCOM_BLOBS_MAX];
 }	drvGroup;
 
+typedef	struct	setCallback
+{
+	SET_CB_FUNCPTR 	cb;
+	void		* 	arg;
+}	setCallback;
+
+typedef	struct	setBlob
+{
+	unsigned int	nGoodBlobs;		/* Number of good receptions of this blob	*/
+	unsigned int	nTimeouts;		/* Number of timeouts for this blob			*/
+	unsigned int	nGetErrors;		/* Number of other fcomBlobGet errors		*/
+	unsigned int	nStatErrors;	/* Number of blobs w/ non-zero stat			*/
+	unsigned int	nTsErrors;		/* Number of blobs w/ mismatched timestamps	*/
+	FcomID			blobId;			/* Fcom Blob ID */
+	FcomBlob	*	pBlob;			/* Ptr to Fcom Blob */
+	const char	*	name;			/* Original blob name */
+}	setBlob;
+
+typedef	struct	drvSet
+{
+	double			timeout;	/* Timeout for blob arrival after beam (sec) */
+	epicsEventId	BlobSetSyncEvent;
+	IOSCANPVT		IoScan;
+	int				nBlobsAdded;
+	int				exitTask;
+	unsigned int	iSet;
+	setBlob			rxBlobs[N_DRV_FCOM_BLOBS_MAX];
+	setCallback		setCallbacks[N_DRV_FCOM_CB_MAX];
+}	drvSet;
+
 epicsMutexId		drvFcomMutex;
-static	drvGroup	drvFcomGroups[N_DRV_FCOM_GROUPS_MAX];
+static	drvGroup	drvFcomGroups[ N_DRV_FCOM_GROUPS_MAX ];
+static	drvSet		drvFcomSets[   N_DRV_FCOM_SETS_MAX   ];
 
 int 	DEBUG_DRV_FCOM_RECV = 2;
 int 	DEBUG_DRV_FCOM_SEND = 2;
@@ -123,8 +136,6 @@ epicsExportAddress(int, DEBUG_DRV_FCOM_SEND);
 /* Share with device support */
 
 /*==========================================================*/
-
-static epicsEventId BlobSetSyncEvent = NULL;
 
 epicsTimeStamp  fcomFiducialTime;
 t_HiResTime		fcomFiducialTsc = 0LL;	/* 64 bit hi-res cpu timestamp counter */
@@ -151,38 +162,92 @@ void	drvFcomSetFuncTicksToSec( TSC_TO_TICKS pTicksToSecFunc )
 	TicksToSec = pTicksToSecFunc;
 }
 
-
-void drvFcomSignalSet( unsigned int	iSet )
+static epicsUInt32
+usSinceFiducial(void)
 {
-	/* Signal the BlobSetSyncEvent to trigger the fcomGetBlobSet call */
-	epicsEventSignal( BlobSetSyncEvent );
-	return;
+	t_HiResTime		curTick		= GetHiResTicks();
+	epicsUInt32		usSinceFid	= 0;
+	if ( fcomFiducialTsc != 0 && TicksToSec != NULL )
+	{
+		usSinceFid = (*TicksToSec)( curTick - fcomFiducialTsc ) * 1e6;
+	}
+	return usSinceFid;
 }
 
+
+static int
+pvTimePulseIdMatches(
+	epicsTimeStamp	*	p_ref,
+	FcomBlobRef			p_cmp	)
+{
+	epicsUInt32 idref, idcmp, diff;
+
+	idref = PULSEID((*p_ref));
+	idcmp = p_cmp->fc_tsLo & PULSEID_INVALID;
+
+	if ( idref == idcmp && idref != PULSEID_INVALID ) {
+		/* Verify that seconds match to less that a few minutes */
+		diff = abs( p_ref->secPastEpoch - p_cmp->fc_tsHi );
+		if ( diff < 4*60 )
+			return 0;
+	}
+
+	return -1;
+}
+
+
 /* Internal use only.  Call w/ mutex locked */
-drvBlob	*	drvFcomFindAvailBlobForId( drvBlob * pFirstTxBlob, FcomID id  )
+grpBlob	*	drvFcomFindAvailBlobForId( grpBlob * pFirstTxBlob, FcomID id  )
 {
 	size_t		iBlob;
-	drvBlob	*	pBlob	= pFirstTxBlob;
-	for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pBlob++ )
+	grpBlob	*	pGrpBlob	= pFirstTxBlob;
+	for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pGrpBlob++ )
 	{
-		if( pBlob->blob.fc_idnt == id )
-			return pBlob;
-		if( pBlob->blob.fc_idnt == 0 )
-			return pBlob;
+		if( pGrpBlob->blob.fc_idnt == id )
+			return pGrpBlob;
+		if( pGrpBlob->blob.fc_idnt == 0 )
+			return pGrpBlob;
 	}
 	return NULL;
 }
 
 /* Internal use only.  Call w/ mutex locked */
-drvBlob	*	drvFcomFindBlobForId( drvBlob * pFirstTxBlob, FcomID id  )
+grpBlob	*	drvFcomFindBlobForId( grpBlob * pFirstTxBlob, FcomID id  )
 {
 	size_t		iBlob;
-	drvBlob	*	pBlob	= pFirstTxBlob;
-	for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pBlob++ )
+	grpBlob	*	pGrpBlob	= pFirstTxBlob;
+	for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pGrpBlob++ )
 	{
-		if( pBlob->blob.fc_idnt == id )
-			return pBlob;
+		if( pGrpBlob->blob.fc_idnt == id )
+			return pGrpBlob;
+	}
+	return NULL;
+}
+
+/* Internal use only.  Call w/ mutex locked */
+setBlob	*	drvFcomFindAvailSetBlobForId( setBlob * pFirstRxBlob, FcomID id  )
+{
+	size_t		iBlob;
+	setBlob	*	pSetBlob	= pFirstRxBlob;
+	for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pSetBlob++ )
+	{
+		if( pSetBlob->blobId == id )
+			return pSetBlob;
+		if( pSetBlob->blobId == 0 )
+			return pSetBlob;
+	}
+	return NULL;
+}
+
+/* Internal use only.  Call w/ mutex locked */
+setBlob	*	drvFcomFindSetBlobForId( setBlob * pFirstRxBlob, FcomID id  )
+{
+	size_t		iBlob;
+	setBlob	*	pSetBlob	= pFirstRxBlob;
+	for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pSetBlob++ )
+	{
+		if( pSetBlob->blobId == id )
+			return pSetBlob;
 	}
 	return NULL;
 }
@@ -208,27 +273,27 @@ int		drvFcomInitGroupBlob( unsigned int	iGroup, FcomID	id, unsigned int fComType
 	}
 
 	/* Find the blob for this id, or an available blob */
-	drvBlob	*	pBlob	= drvFcomFindAvailBlobForId( &pGroup->txBlobs[0], id );
-	if ( pBlob == NULL )
+	grpBlob	*	pGrpBlob	= drvFcomFindAvailBlobForId( &pGroup->txBlobs[0], id );
+	if ( pGrpBlob == NULL )
 	{
 		errlogPrintf( "drvFcomInitGroupBlob: Group %d, Blob "FCOM_ID_FMT": No more blobs available\n", iGroup, id );
 		epicsMutexUnlock( drvFcomMutex );
 		return -1;
 	}
 
-	if ( pBlob->blob.fc_idnt == 0 )
+	if ( pGrpBlob->blob.fc_idnt == 0 )
 	{
 		/* Initialize drvFcom blob for up to N values */
-		pBlob->nAlloc		= 8;	/* Start w/ 8, can be increased as needed */
-		pBlob->name			= name;
-		pBlob->blob.fc_raw	= calloc( pBlob->nAlloc, FCOM_EL_SIZE(fComType) );
-		pBlob->blob.fc_vers	= FCOM_PROTO_VERSION;
-		pBlob->blob.fc_idnt	= id;
-		pBlob->blob.fc_type	= fComType;
-		pBlob->blob.fc_stat	= 0;
-		pBlob->blob.fc_tsLo	= 0;
-		pBlob->blob.fc_tsHi	= 0;
-		pBlob->blob.fc_nelm	= 0;
+		pGrpBlob->nAlloc		= 8;	/* Start w/ 8, can be increased as needed */
+		pGrpBlob->name			= name;
+		pGrpBlob->blob.fc_raw	= calloc( pGrpBlob->nAlloc, FCOM_EL_SIZE(fComType) );
+		pGrpBlob->blob.fc_vers	= FCOM_PROTO_VERSION;
+		pGrpBlob->blob.fc_idnt	= id;
+		pGrpBlob->blob.fc_type	= fComType;
+		pGrpBlob->blob.fc_stat	= 0;
+		pGrpBlob->blob.fc_tsLo	= 0;
+		pGrpBlob->blob.fc_tsHi	= 0;
+		pGrpBlob->blob.fc_nelm	= 0;
 
 		if ( DEBUG_DRV_FCOM_SEND >= 1 )
 			printf( "drvFcomInitGroupBlob: Group %u, Blob "FCOM_ID_FMT", %s\n", iGroup, id, name );
@@ -236,7 +301,7 @@ int		drvFcomInitGroupBlob( unsigned int	iGroup, FcomID	id, unsigned int fComType
 	else
 	{
 		if ( DEBUG_DRV_FCOM_SEND >= 2 )
-			printf( "drvFcomInitGroupBlob: Group %u, Blob "FCOM_ID_FMT", %s\n", iGroup, id, name );
+			printf( "drvFcomInitGroupBlob: Group %u, Blob "FCOM_ID_FMT", %s already initialized.\n", iGroup, id, name );
 	}
 
 	epicsMutexUnlock( drvFcomMutex );
@@ -267,20 +332,20 @@ int		drvFcomUpdateGroupBlobDouble(
 	drvGroup	*	pGroup = &drvFcomGroups[iGroup];
 
 	/* Find the blob for this id */
-	drvBlob	*	pBlob	= drvFcomFindBlobForId( &pGroup->txBlobs[0], id );
-	if ( pBlob == NULL )
+	grpBlob	*	pGrpBlob	= drvFcomFindBlobForId( &pGroup->txBlobs[0], id );
+	if ( pGrpBlob == NULL )
 	{
 		errlogPrintf( "drvFcomUpdateGroupBlobDouble: Group %d, Blob "FCOM_ID_FMT" not found!\n", iGroup, id );
 		epicsMutexUnlock( drvFcomMutex );
 		return FCOM_ERR_ID_NOT_FOUND;
 	}
 
-	if( pBlob->nAlloc <= iValue )
+	if( pGrpBlob->nAlloc <= iValue )
 	{
-		pBlob->nAlloc *= 2;	/* Double the capacity */
+		pGrpBlob->nAlloc *= 2;	/* Double the capacity */
 		if ( DEBUG_DRV_FCOM_SEND >= 2 )
-			printf( "drvFcomUpdateGroupBlobDouble: Group %u, Blob "FCOM_ID_FMT", bumping capacity to %zu\n", iGroup, id, pBlob->nAlloc );
-		if( pBlob->nAlloc <= iValue )
+			printf( "drvFcomUpdateGroupBlobDouble: Group %u, Blob "FCOM_ID_FMT", bumping capacity to %zu\n", iGroup, id, pGrpBlob->nAlloc );
+		if( pGrpBlob->nAlloc <= iValue )
 		{
 			if ( iValue > 1000 )
 			{	/* Probably an error */
@@ -288,32 +353,36 @@ int		drvFcomUpdateGroupBlobDouble(
 				epicsMutexUnlock( drvFcomMutex );
 				return -1;
 			}
-			pBlob->nAlloc = iValue;
+			pGrpBlob->nAlloc = iValue;
 		}
-		pBlob->blob.fc_raw	= realloc( pBlob->blob.fc_raw, pBlob->nAlloc * FCOM_EL_SIZE(pBlob->blob.fc_type) );
-		if ( pBlob->blob.fc_raw == NULL )
+		pGrpBlob->blob.fc_raw	= realloc( pGrpBlob->blob.fc_raw, pGrpBlob->nAlloc * FCOM_EL_SIZE(pGrpBlob->blob.fc_type) );
+		if ( pGrpBlob->blob.fc_raw == NULL )
 		{
-			pBlob->nAlloc = 0;
+			pGrpBlob->nAlloc = 0;
 			errlogPrintf( "drvFcomUpdateGroupBlobDouble: Group %d, Blob "FCOM_ID_FMT", Unable to realloc for Value index %d!\n", iGroup, id, iValue );
 			epicsMutexUnlock( drvFcomMutex );
 			return -1;
 		}
 	}
 
-	if( pBlob->blob.fc_nelm < (iValue + 1) )
-		pBlob->blob.fc_nelm = (iValue + 1);
-	pBlob->blob.fc_flt[iValue] = value;
+	if( pGrpBlob->blob.fc_nelm < (iValue + 1) )
+		pGrpBlob->blob.fc_nelm = (iValue + 1);
+	if( pGrpBlob->blob.fc_type == FCOM_EL_DOUBLE )
+		pGrpBlob->blob.fc_dbl[iValue] = value;
+	else
+		pGrpBlob->blob.fc_flt[iValue] = value;
 	if ( pTimeStamp != NULL )
 	{
-		pBlob->blob.fc_tsHi = pTimeStamp->secPastEpoch;
-		pBlob->blob.fc_tsLo = pTimeStamp->nsec;
+		pGrpBlob->blob.fc_tsHi = pTimeStamp->secPastEpoch;
+		pGrpBlob->blob.fc_tsLo = pTimeStamp->nsec;
+		fid = pGrpBlob->blob.fc_tsLo & 0x1FFFF;
 	}
 
 	epicsMutexUnlock( drvFcomMutex );
 
 	if ( DEBUG_DRV_FCOM_SEND >= 4 )
-		printf( "drvFcomUpdateGroupBlobDouble: Group %u, Blob "FCOM_ID_FMT", %s, fc_flt[%d]=%f, fid %d\n",
-				iGroup, id, pBlob->name, iValue, pBlob->blob.fc_flt[iValue], fid );
+		printf( "drvFcomUpdateGroupBlobDouble: Group %u, Blob "FCOM_ID_FMT", %s, val[%d]=%f, fid %d\n",
+				iGroup, id, pGrpBlob->name, iValue, value, fid );
 
 	return(0);
 }
@@ -338,18 +407,18 @@ int		drvFcomUpdateGroupBlobLong(
 	drvGroup	*	pGroup = &drvFcomGroups[iGroup];
 
 	/* Find the blob for this id */
-	drvBlob	*	pBlob	= drvFcomFindBlobForId( &pGroup->txBlobs[0], id );
-	if ( pBlob == NULL )
+	grpBlob	*	pGrpBlob	= drvFcomFindBlobForId( &pGroup->txBlobs[0], id );
+	if ( pGrpBlob == NULL )
 	{
 		errlogPrintf( "drvFcomUpdateGroupBlobLong: Group %d, Blob "FCOM_ID_FMT" not found!\n", iGroup, id );
 		epicsMutexUnlock( drvFcomMutex );
 		return FCOM_ERR_ID_NOT_FOUND;
 	}
 
-	if( pBlob->nAlloc <= iValue )
+	if( pGrpBlob->nAlloc <= iValue )
 	{
-		pBlob->nAlloc *= 2;	/* Double the capacity */
-		if( pBlob->nAlloc <= iValue )
+		pGrpBlob->nAlloc *= 2;	/* Double the capacity */
+		if( pGrpBlob->nAlloc <= iValue )
 		{
 			if ( iValue > 1000 )
 			{	/* Probably an error */
@@ -357,25 +426,25 @@ int		drvFcomUpdateGroupBlobLong(
 				epicsMutexUnlock( drvFcomMutex );
 				return FCOM_ERR_INVALID_ARG;
 			}
-			pBlob->nAlloc = iValue;
+			pGrpBlob->nAlloc = iValue;
 		}
-		pBlob->blob.fc_raw	= realloc( pBlob->blob.fc_raw, pBlob->nAlloc * FCOM_EL_SIZE(pBlob->blob.fc_type) );
-		if ( pBlob->blob.fc_raw == NULL )
+		pGrpBlob->blob.fc_raw	= realloc( pGrpBlob->blob.fc_raw, pGrpBlob->nAlloc * FCOM_EL_SIZE(pGrpBlob->blob.fc_type) );
+		if ( pGrpBlob->blob.fc_raw == NULL )
 		{
-			pBlob->nAlloc = 0;
+			pGrpBlob->nAlloc = 0;
 			errlogPrintf( "drvFcomUpdateGroupBlobLong: Group %d, Blob "FCOM_ID_FMT", Unable to realloc for Value index %d!\n", iGroup, id, iValue );
 			epicsMutexUnlock( drvFcomMutex );
 			return FCOM_ERR_NO_MEMORY;
 		}
 	}
 
-	if( pBlob->blob.fc_nelm < iValue )
-		pBlob->blob.fc_nelm = iValue;
-	pBlob->blob.fc_u32[iValue] = value;
+	if( pGrpBlob->blob.fc_nelm < iValue )
+		pGrpBlob->blob.fc_nelm = iValue;
+	pGrpBlob->blob.fc_u32[iValue] = value;
 	if ( pTimeStamp != NULL )
 	{
-		pBlob->blob.fc_tsHi = pTimeStamp->secPastEpoch;
-		pBlob->blob.fc_tsLo = pTimeStamp->nsec;
+		pGrpBlob->blob.fc_tsHi = pTimeStamp->secPastEpoch;
+		pGrpBlob->blob.fc_tsLo = pTimeStamp->nsec;
 	}
 
 	epicsMutexUnlock( drvFcomMutex );
@@ -389,6 +458,7 @@ int		drvFcomUpdateGroupBlobLong(
  **/
 int		drvFcomWriteBlobToGroup( unsigned int iGroup, FcomID id )
 {
+	int	fid;
 	int	status	= 0;
 
 	if ( DEBUG_DRV_FCOM_SEND >= 5 )
@@ -420,22 +490,23 @@ int		drvFcomWriteBlobToGroup( unsigned int iGroup, FcomID id )
 	}
 
 	/* Find the blob for this id */
-	drvBlob	*	pBlob	= drvFcomFindBlobForId( &pGroup->txBlobs[0], id );
-	if ( pBlob == NULL )
+	grpBlob	*	pGrpBlob	= drvFcomFindBlobForId( &pGroup->txBlobs[0], id );
+	if ( pGrpBlob == NULL )
 	{
 		errlogPrintf( "drvFcomWriteBlobToGroup: Group %d, Blob "FCOM_ID_FMT" not found!\n", iGroup, id );
 		epicsMutexUnlock( drvFcomMutex );
 		return FCOM_ERR_ID_NOT_FOUND;
 	}
-	if ( pBlob->blob.fc_raw == NULL )
+	if ( pGrpBlob->blob.fc_raw == NULL )
 	{
 		errlogPrintf( "drvFcomWriteBlobToGroup: Group %d, Blob "FCOM_ID_FMT", data allocation error!\n", iGroup, id );
 		epicsMutexUnlock( drvFcomMutex );
 		return -1;
 	}
+	fid = pGrpBlob->blob.fc_tsLo & 0x1FFFF;
 
 	/* Add the blob to the group */
-	status = fcomAddGroup( pGroup->groupHandle, &pBlob->blob );
+	status = fcomAddGroup( pGroup->groupHandle, &pGrpBlob->blob );
 	if ( status != 0 )
 	{
 		errlogPrintf( "drvFcomWriteBlobToGroup Error: Group %d, Blob "FCOM_ID_FMT", %s\n", iGroup, id, fcomStrerror(status) );
@@ -446,8 +517,8 @@ int		drvFcomWriteBlobToGroup( unsigned int iGroup, FcomID id )
 
 	epicsMutexUnlock( drvFcomMutex );
 
-	if ( DEBUG_DRV_FCOM_SEND >= 4 )
-		printf( "drvFcomWriteBlobToGroup: Group %u, Blob "FCOM_ID_FMT", %s\n", iGroup, id, pBlob->name );
+	if ( DEBUG_DRV_FCOM_SEND >= 3 )
+		printf( "drvFcomWriteBlobToGroup: Group %u, Blob "FCOM_ID_FMT", %s, fid %d\n", iGroup, id, pGrpBlob->name, fid );
 
 	return(0);
 }
@@ -533,6 +604,347 @@ IOSCANPVT	drvFcomGetGroupIoScan( unsigned int iGroup )
 	return( pGroup->IoScan );
 }
 
+/*
+ *	FCOM Set support
+ */
+
+/**
+ ** Returns ptr to ioscan for the specified Set
+ **/
+IOSCANPVT	drvFcomGetSetIoScan( unsigned int iSet )
+{
+	if ( iSet >= N_DRV_FCOM_SETS_MAX )
+	{
+		errlogPrintf( "drvFcomGetSetIoScan: Invalid set %d\n", iSet );
+		return NULL;
+	}
+
+	epicsMutexLock( drvFcomMutex );
+	drvSet	*	pSet = &drvFcomSets[iSet];
+	if ( pSet->IoScan == NULL )
+	{
+		errlogPrintf( "drvFcomGetSetIoScan: Set %d not initialized!\n", iSet );
+	}
+
+	epicsMutexUnlock( drvFcomMutex );
+	return( pSet->IoScan );
+}
+
+long drvFcomAddSetCallback( unsigned int iSet, SET_CB_FUNCPTR cb, void * pArg )
+{
+	unsigned int	iCb;
+	drvSet		*	pSet;
+
+	if ( iSet >= N_DRV_FCOM_SETS_MAX )
+	{
+		errlogPrintf( "drvFcomAddSetCallback: Invalid set %d\n", iSet );
+		return -1;
+	}
+
+	pSet = &drvFcomSets[iSet];
+	for ( iCb = 0; iCb < N_DRV_FCOM_CB_MAX; iCb++ )
+	{
+		if ( pSet->setCallbacks[iCb].cb == NULL )
+		{
+			pSet->setCallbacks[iCb].cb	= cb;
+			pSet->setCallbacks[iCb].arg	= pArg;
+			if ( DEBUG_DRV_FCOM_RECV >= 1 )
+				printf( "drvFcomAddSetCallback: Added callback for set %u\n", iSet );
+			return 0;
+		}
+	}
+
+	errlogPrintf( "drvFcomAddSetCallback: Set %d, No more callbacks available!\n", iSet );
+	return -1;
+}
+
+/* TODO: Need to call this at start of beam w/o adding dependency on event module
+ * Consider a bo record for each set w/ SCAN=Event and EVNT=40
+ */
+void drvFcomSignalSet( unsigned int	iSet )
+{
+	if ( iSet >= N_DRV_FCOM_SETS_MAX )
+	{
+		errlogPrintf( "drvFcomGetSetIoScan: Invalid set %d\n", iSet );
+		return;
+	}
+
+	if ( drvFcomSets[iSet].BlobSetSyncEvent != NULL )
+	{
+		/* Signal the BlobSetSyncEvent to trigger the fcomGetBlobSet call */
+		epicsEventSignal( drvFcomSets[iSet].BlobSetSyncEvent );
+	}
+	return;
+}
+
+static int drvFcomSetTask(void * parg)
+{
+	int					fid;
+	unsigned int		iBlob;
+	unsigned int		iCb;
+	int					status	= 0;
+	drvSet			*	pSet	= (drvSet *) parg;
+
+    epicsMutexLock(drvFcomMutex);
+	/* Create synchronization event */
+	pSet->BlobSetSyncEvent = epicsEventMustCreate( epicsEventEmpty );
+		
+	/* Register EVRFire */
+	/* evrTimeRegister(EVRFire, fcomBlobSet); */
+    epicsMutexUnlock(drvFcomMutex);
+
+	if( pSet->timeout == 0 )
+		pSet->timeout = DEFAULT_SET_TIMEOUT;
+
+	while ( pSet->exitTask == 0 )
+	{
+		status = epicsEventWaitWithTimeout( pSet->BlobSetSyncEvent, pSet->timeout );
+		switch( status )
+		{
+		case epicsEventWaitTimeout:
+			if ( DEBUG_DRV_FCOM_RECV >= 3 ) errlogPrintf( "drvFcomSetTask %d: Timed out waiting for Sync event\n", pSet->iSet );
+			continue;
+		default:
+			if ( DEBUG_DRV_FCOM_RECV >= 1 ) errlogPrintf( "drvFcomSetTask %d: Timed out waiting for Sync event\n", pSet->iSet );
+				errlogPrintf( "Unexpected epicsEventWaitWithTimeout Error: %d\n", status );
+			continue;
+		case epicsEventWaitOK:
+			break;
+		}
+
+#if 0	/* fcomGetBlobSet */
+		{
+			int		getBlobTime	= usSinceFiducial();
+			if(DEBUG_DRV_FCOM_RECV >= 4) errlogPrintf("Calling fcomGetBlobSet w/ timeout %u ms at FID+%d us\n", (unsigned int) timer_delay_ms, getBlobTime );
+			t_HiResTime		tickBeforeGet	= GetHiResTicks();
+			/* Get all the blobs w/ timeout timer_delay_ms */
+			FcomBlobSetMask	waitFor	= (1<<N_PULSE_BLOBS) - 1;
+			status = fcomGetBlobSet( fcomBlobSet, &got_mask, waitFor, FCOM_SET_WAIT_ALL, timer_delay_ms );
+			t_HiResTime		tickAfterGet	= GetHiResTicks();
+			double			usInFCom		= HiResTicksToSeconds( tickAfterGet - tickBeforeGet ) * 1e6;
+			if ( status && FCOM_ERR_TIMEDOUT != status )
+			{
+				errlogPrintf("fcomGetBlobSet failed: %s; sleeping for 2 seconds\n", fcomStrerror(status));
+				for ( loop = 0; loop < N_PULSE_BLOBS; loop++ )
+					fcomFcomGetErrs[loop]++;
+				epicsThreadSleep( 2.0 );
+				continue;
+			}
+			if ( status == FCOM_ERR_TIMEDOUT )
+			{
+				/* If a timeout happened then fall through; there still might be good * blobs...  */
+				if(DEBUG_DRV_FCOM_RECV >= 3) errlogPrintf("fcomGetBlobSet %u ms timeout in %.1fus! req 0x%X, got 0x%X\n", (unsigned int) timer_delay_ms, usInFCom, (unsigned int)waitFor, (unsigned int)got_mask );
+			}
+			else
+			{
+				if(DEBUG_DRV_FCOM_RECV >= 4) errlogPrintf("fcomGetBlobSet succeeeded.\n");
+			}
+		}
+		this_time = usSinceFiducial();
+
+		if ( this_time > fcomMaxFcomDelayUs )
+			fcomMaxFcomDelayUs = this_time;
+		if ( this_time < fcomMinFcomDelayUs )
+			fcomMinFcomDelayUs = this_time;
+
+		/* Running average: fn+1 = 127/128 * fn + 1/128 * x = fn - 1/128 fn + 1/128 x */
+		fcomAvgFcomDelayUs +=  ((int)(- fcomAvgFcomDelayUs + this_time)) >> 8;
+#else	/* Not using fcomGetBlobSet */
+		epicsMutexLock(drvFcomMutex);
+		setBlob		*	pSetBlob	= &(pSet->rxBlobs[0]);
+		for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pSetBlob++ )
+		{
+			if ( pSetBlob->pBlob != NULL )
+				fcomReleaseBlob( &pSetBlob->pBlob );
+			pSetBlob->pBlob	= NULL;
+		}
+		epicsMutexUnlock(drvFcomMutex);
+
+		/* Sleep for the specified set timeout interval */
+		struct timespec		blobTimeout;
+		blobTimeout.tv_sec	= (int) floor( pSet->timeout );
+		blobTimeout.tv_nsec	= (int) (( pSet->timeout - blobTimeout.tv_sec ) / 1e9 );
+		nanosleep( &blobTimeout, 0 );
+
+		/* Collect the blobs that arrived */
+		epicsMutexLock(drvFcomMutex);
+		pSetBlob	= &(pSet->rxBlobs[0]);
+		for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pSetBlob++ )
+		{
+			if ( pSetBlob->blobId == FCOM_ID_NONE )
+				continue;
+			status = fcomGetBlob( pSetBlob->blobId, &pSetBlob->pBlob, 0 );
+
+			switch ( status )
+			{
+			case 0:
+				pSetBlob->nGoodBlobs++;
+				break;
+			case FCOM_ERR_NO_DATA:
+				pSetBlob->nTimeouts++;
+				continue;
+			default:
+				pSetBlob->nGetErrors++;
+				errlogPrintf( "drvFcomSetTask Error: Set %d, Blob "FCOM_ID_FMT", %s\n", pSet->iSet, pSetBlob->blobId, fcomStrerror(status) );
+				continue;
+			}
+
+			assert( pSetBlob->pBlob != NULL );
+			/* Check blob status */
+			if ( pSetBlob->pBlob->fc_stat != 0 )
+			{
+				/* TODO: Add checks for special cases
+				 * FC_STAT_BPM_REFLO for BPMS
+				 * FC_STAT_BLEN_INVAL_BIMASK for BLEN
+				 */
+				pSetBlob->nStatErrors++;
+			}
+
+			fid = pSetBlob->pBlob->fc_tsLo & 0x1FFFF;
+			if ( DEBUG_DRV_FCOM_RECV >= 3 )
+				printf( "drvFcomSetTask: Set %u, Rcvd Blob "FCOM_ID_FMT", %s, fid %d\n", pSet->iSet, pSetBlob->blobId, pSetBlob->name, fid );
+
+		}
+		epicsMutexUnlock(drvFcomMutex);
+#endif 	/* fcomGetBlobSet */
+
+		/*
+		 * This scanIoRequest triggers I/O Scan processing of all the FCOM DTYP records.
+		 * It's getting triggered after the FCOM blob's are fetched
+		 */
+		scanIoRequest( pSet->IoScan );
+
+		/* Call the callbacks */
+		for ( iCb = 0; iCb < N_DRV_FCOM_CB_MAX; iCb++ )
+		{
+			if( pSet->setCallbacks[iCb].cb != NULL )
+			{
+				if ( DEBUG_DRV_FCOM_RECV >= 4 )
+					printf( "drvFcomAddSetCallback: Calling set %u callback %u\n", pSet->iSet, iCb );
+				pSet->setCallbacks[iCb].cb( pSet->setCallbacks[iCb].arg );
+			}
+		}
+#if 0
+		this_time = usSinceFiducial();
+		if ( this_time > fcomMaxPostDelayUs )
+			fcomMaxPostDelayUs = this_time;
+		/* Running average: fn+1 = 127/128 * fn + 1/128 * x = fn - 1/128 fn + 1/128 x */
+		fcomAvgPostDelayUs += ((int) (- fcomAvgPostDelayUs + this_time)) >> 8;
+#endif
+	}
+
+	return(0);
+}
+
+#if 0
+{
+	int					status;
+	epicsTimeStamp	*	p_refTime;
+	FcomBlobSetMask		got_mask;
+	epicsUInt32			this_time;
+
+		if ( ! fcomBlobSet )
+		{
+			for ( loop = 0; loop < N_PULSE_BLOBS; loop++ ) {
+				if ( fcomPulseBlobs[loop].blob ) {
+					status = fcomReleaseBlob( & fcomPulseBlobs[loop].blob );
+					if ( status ) {
+						errlogPrintf("Fatal Error: Unable to release blob (for %s): %s\n",
+								fcomPulseBlobs[loop].name,
+								fcomStrerror(status));
+						return -1;
+					}
+				}
+			}
+		}
+	if ( fcomBlobSet ) {
+		status = fcomFreeBlobSet( fcomBlobSet );
+		if ( status )
+			fprintf(stderr, "Unable to destroy blob set: %s\n", fcomStrerror(status));
+		fcomBlobSet = 0;
+	}
+
+	for ( loop = 0; loop < N_PULSE_BLOBS; loop++ ) {
+		status = fcomUnsubscribe( fcomBlobIDs[loop] );
+		if ( status )
+			fprintf(stderr, "Unable to unsubscribe %s from FCOM: %s\n", fcomPulseBlobs[loop].name, fcomStrerror(status));
+	}
+}
+#endif
+
+int drvFcomAddBlobToSet( unsigned int iSet, FcomID blobId, const char * name )
+{
+	int		status;
+
+	if ( iSet >= N_DRV_FCOM_SETS_MAX )
+	{
+		errlogPrintf( "drvFcomAddBlobToSet: Invalid set %d\n", iSet );
+		return -1;
+	}
+
+	epicsMutexLock( drvFcomMutex );
+	drvSet	*	pSet = &drvFcomSets[iSet];
+	if ( pSet->IoScan == NULL )
+	{
+		/* Initialize set */
+		scanIoInit( &pSet->IoScan );
+		pSet->nBlobsAdded	= 0;
+
+		epicsThreadMustCreate( "drvFcom", TASK_PRIORITY, 20480, (EPICSTHREADFUNC) drvFcomSetTask, pSet );
+
+#if 0
+		if ( (status = fcomAllocBlobSet( fcomBlobIDs, sizeof(fcomBlobIDs)/sizeof(fcomBlobIDs[0]), &fcomBlobSet)) ) {
+			errlogPrintf("ERROR: Unable to allocate blob set: %s; trying asynchronous mode\n", fcomStrerror(status));
+			fcomBlobSet = 0;
+		}
+#endif
+	}
+
+	/* Find the blob for this id, or an available blob */
+	setBlob	*	pSetBlob	= drvFcomFindAvailSetBlobForId( &pSet->rxBlobs[0], blobId );
+	if ( pSetBlob == NULL )
+	{
+		errlogPrintf( "drvFcomAddBlobToSet: Set %d, Blob " FCOM_ID_FMT ": No more blobs available\n", iSet, blobId );
+		epicsMutexUnlock( drvFcomMutex );
+		return -1;
+	}
+
+	if ( pSetBlob->blobId == 0 )
+	{
+		/* Reserve this setBlob */
+		pSetBlob->name		= name;
+		pSetBlob->blobId	= blobId;
+
+		/* fcomUtilFlag = DP_DEBUG; */
+		/* No need to use FCOM_SYNC_GET unless we plan to call fcomGetBlob w/ a timeout */
+		status = fcomSubscribe( blobId, FCOM_ASYNC_GET );
+		if ( 0 != status )
+		{
+			pSetBlob->name		= "";
+			pSetBlob->blobId	= FCOM_ID_NONE;
+			errlogPrintf(	"FATAL ERROR: Unable to subscribe %s (" FCOM_ID_FMT ") to FCOM: %s\n",
+							name, blobId, fcomStrerror(status) );
+			epicsMutexUnlock( drvFcomMutex );
+			return -1;
+		}
+
+		pSet->nBlobsAdded++;
+
+		if ( DEBUG_DRV_FCOM_RECV >= 1 )
+			printf( "drvFcomAddBlobToSet: Set %u, Subscribed to Blob "FCOM_ID_FMT", %s\n", iSet, blobId, name );
+	}
+	else
+	{
+		if ( DEBUG_DRV_FCOM_RECV >= 2 )
+			printf( "drvFcomAddBlobToSet: Set %u, Blob "FCOM_ID_FMT", %s already subscribed.\n", iSet, blobId, name );
+	}
+
+	epicsMutexUnlock( drvFcomMutex );
+
+	return 0;
+}
+
+
 
 /**************************************************************************************************/
 /* Here we supply the driver functions for epics                                            */
@@ -552,7 +964,9 @@ static void drvFcomShutdown(void * parg)
 /* Driver Initialization function */
 static long drvFcom_Init()
 {
-	unsigned int iGroup = 0;
+	unsigned int iGroup;
+	unsigned int iSet;
+	unsigned int iCb;
     printf( "drvFcom_Init:\n" );
 
 	drvFcomMutex = epicsMutexMustCreate();
@@ -562,15 +976,41 @@ static long drvFcom_Init()
 	for ( iGroup = 0; iGroup < N_DRV_FCOM_GROUPS_MAX; iGroup++ )
 	{
 		size_t			iBlob;
-		drvBlob		*	pBlob;
+		grpBlob		*	pGrpBlob;
 		drvFcomGroups[iGroup].groupHandle	= NULL;
 		drvFcomGroups[iGroup].IoScan		= NULL;
-		pBlob	= &(drvFcomGroups[iGroup].txBlobs[0]);
-		for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pBlob++ )
+		pGrpBlob	= &(drvFcomGroups[iGroup].txBlobs[0]);
+		for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pGrpBlob++ )
 		{
-			pBlob->blob.fc_idnt	= 0;
-			pBlob->blob.fc_raw	= 0;
-			pBlob->name			= "";
+			pGrpBlob->blob.fc_idnt	= 0;
+			pGrpBlob->blob.fc_raw	= 0;
+			pGrpBlob->name			= "";
+		}
+	}
+	for ( iSet = 0; iSet < N_DRV_FCOM_SETS_MAX; iSet++ )
+	{
+		size_t			iBlob;
+		setBlob		*	pSetBlob;
+		drvSet		*	pSet = &drvFcomSets[iSet];
+		pSet->IoScan		= NULL;
+		pSet->exitTask		= 0;
+		pSet->iSet			= iSet;
+		pSetBlob	= &(pSet->rxBlobs[0]);
+		for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pSetBlob++ )
+		{
+			pSetBlob->blobId		= 0;
+			pSetBlob->pBlob			= NULL;
+			pSetBlob->name			= "";
+			pSetBlob->nGoodBlobs	= 0;
+			pSetBlob->nTimeouts		= 0;
+			pSetBlob->nGetErrors	= 0;
+			pSetBlob->nStatErrors	= 0;
+			pSetBlob->nTsErrors		= 0;
+		}
+		for ( iCb = 0; iCb < N_DRV_FCOM_CB_MAX; iCb++ )
+		{
+			pSet->setCallbacks[iCb].cb	= NULL;
+			pSet->setCallbacks[iCb].arg	= NULL;
 		}
 	}
 	epicsMutexUnlock( drvFcomMutex );
@@ -582,23 +1022,47 @@ static long drvFcom_Init()
 
 static long drvFcom_Report(int level)
 {
-	unsigned int iGroup = 0;
+	unsigned int iGroup;
+	unsigned int iSet;
     printf("\ndrvFcom Version: "FCOM_DRV_VERSION"\n\n");
 
 	for ( iGroup = 0; iGroup < N_DRV_FCOM_GROUPS_MAX; iGroup++ )
 	{
 		size_t			iBlob;
-		drvBlob		*	pBlob;
+		grpBlob		*	pGrpBlob;
 		drvGroup	*	pGroup = &drvFcomGroups[iGroup];
 		if ( pGroup->IoScan == NULL )
 			continue;
 
-		pBlob	= &pGroup->txBlobs[0];
-		for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pBlob++ )
+		pGrpBlob	= &pGroup->txBlobs[0];
+		for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pGrpBlob++ )
 		{
-			if ( pBlob->blob.fc_idnt == 0 )
+			if ( pGrpBlob->blob.fc_idnt == 0 )
 				continue;
-			printf( "Group %d, Blob Id "FCOM_ID_FMT", %s\n", iGroup, pBlob->blob.fc_idnt, pBlob->name );
+			printf( "Group %d, Blob Id "FCOM_ID_FMT", %s\n", iGroup, pGrpBlob->blob.fc_idnt, pGrpBlob->name );
+		}
+	}
+
+	for ( iSet = 0; iSet < N_DRV_FCOM_SETS_MAX; iSet++ )
+	{
+		size_t			iBlob;
+		size_t			iCb;
+		unsigned int	nCb = 0;
+		setBlob		*	pSetBlob;
+		drvSet		*	pSet = &drvFcomSets[iSet];
+		if ( pSet->IoScan == NULL )
+			continue;
+
+		for ( iCb = 0; iCb < N_DRV_FCOM_CB_MAX; iCb++ )
+			if ( pSet->setCallbacks[iCb].cb != 0 )
+				nCb++;
+		printf( "Set %d, %u Blobs, %u Callbacks, timeout %f\n", iSet, pSet->nBlobsAdded, nCb, pSet->timeout );
+		pSetBlob	= &pSet->rxBlobs[0];
+		for ( iBlob = 0; iBlob < N_DRV_FCOM_BLOBS_MAX; iBlob++, pSetBlob++ )
+		{
+			if ( pSetBlob->blobId == 0 )
+				continue;
+			printf( "Set %d, Blob Id "FCOM_ID_FMT", %s, %u good, %u timeouts\n", iSet, pSetBlob->blobId, pSetBlob->name, pSetBlob->nGoodBlobs, pSetBlob->nTimeouts );
 		}
 	}
 
@@ -617,4 +1081,3 @@ static const struct drvet drvFcom =
 };
 
 epicsExportAddress( drvet, drvFcom );
-

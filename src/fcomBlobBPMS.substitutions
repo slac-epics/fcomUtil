@@ -1,0 +1,36 @@
+#
+# Sample substitutions file to simulate a BPMS Blob
+#
+
+# Defines 3 ao records: X, Y, and T values for each BPM
+file fcomBlobAi.template
+{
+	pattern
+	{	PV,							INDEX,		SET,		BLOB,	 EGU		}
+	{	"\$(PV=\$(BLOB)X_FCOM_RBV)",	0,	"\$(SET)",	"\$(BLOB)X", "mm"		}
+	{	"\$(PV=\$(BLOB)Y_FCOM_RBV)",	1,	"\$(SET)",	"\$(BLOB)Y", "mm"		}
+	{	"\$(PV=\$(BLOB)T_FCOM_RBV)",	2,	"\$(SET)",	"\$(BLOB)T", "Nel"		}
+}
+
+# Escape most of the macros so they can keep their
+# defaults and be defined or defaulted later.
+# Defines 3 links for X, Y, and T values for each BPM
+file fcomBlobSet.template
+{
+	{
+		SCAN	= "\$(SCAN=Event)",
+		BLOB	= "\$(BLOB)X",
+		SET		= "\$(SET)",
+		EC		= "\$(EC=40)",
+	}
+}
+
+file fcomBlobStatus.template
+{
+	{
+		BLOB	= "\$(BLOB)X",
+		SET		= "\$(SET)",
+		EC		= "\$(EC=40)",
+	}
+}
+

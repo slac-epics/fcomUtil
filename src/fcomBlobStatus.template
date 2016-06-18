@@ -1,0 +1,74 @@
+# fcomBlobStatus.template: PV's for FCOM blob diagnostics
+
+# fcomDevSubInit will register w/ fcomDrv for a callback when
+# the set either receives all it's blobs or times out.
+# The callback causes this status subroutine record to process.
+# Note: INPB will get treated as a CA_LINK but subRecord.c and
+# may or may not be resolved, but we just grab the INPB string
+# to do the blob lookup.
+record( aSub, "$(SUB_PV=$(BLOB)_STATUS_SUB)" )
+{
+	field( SCAN, "$(SCAN=Passive)" )
+	field( INAM, "fcomDevSubInit" )
+	field( SNAM, "fcomDevSubProc" )
+	field( TSE,  "$(EC=40)" )
+	field( FTA,  "ULONG"  ) field( INPA, "$(SET)" )
+	field( FTB,  "STRING" ) field( INPB, "$(BLOB)_NAME PP MS" )
+	field( FTVA, "ULONG"  ) field( OUTA, "$(GOOD_PV=$(BLOB)_GOOD) PP" )
+	field( FTVB, "ULONG"  ) field( OUTB, "$(TOUT_PV=$(BLOB)_TIMEOUT) PP" )
+	field( FTVC, "ULONG"  ) field( OUTC, "$(GET_PV=$(BLOB)_GET_ERR) PP" )
+	field( FTVD, "ULONG"  ) field( OUTD, "$(STAT_PV=$(BLOB)_STAT_ERR) PP" )
+	field( FTVE, "ULONG"  ) field( OUTE, "$(TS_PV=$(BLOB)_TS_ERR) PP" )
+}
+
+record( stringin, "$(BLOB)_NAME" )
+{
+	field( VAL,  "$(BLOB)" )
+	field( PINI, "YES" )
+}
+
+record( longin, "$(GOOD_PV=$(BLOB)_GOOD)" )
+{
+#	field( SCAN, "I/O Intr" )
+#	field( DTYP, "FCOM" )
+#	field( INP,  "#C-1S$(SET)@$(BLOB)" )
+	field( TSE,  "$(EC=40)" )
+	info( autosaveFields, "HHSV HIGH HIHI HSV LLSV LOLO LOW LSV EGU DESC HOPR LOPR VAL" )
+}
+
+record( longin, "$(TOUT_PV=$(BLOB)_TIMEOUT)" )
+{
+#	field( SCAN, "I/O Intr" )
+#	field( DTYP, "FCOM" )
+#	field( INP,  "#C-2S$(SET)@$(BLOB)" )
+	field( TSE,  "$(EC=40)" )
+	info( autosaveFields, "HHSV HIGH HIHI HSV LLSV LOLO LOW LSV EGU DESC HOPR LOPR VAL" )
+}
+
+record( longin, "$(ERR_PV=$(BLOB)_GET_ERR)" )
+{
+#	field( SCAN, "I/O Intr" )
+#	field( DTYP, "FCOM" )
+#	field( INP,  "#C-3S$(SET)@$(BLOB)" )
+	field( TSE,  "$(EC=40)" )
+	info( autosaveFields, "HHSV HIGH HIHI HSV LLSV LOLO LOW LSV EGU DESC HOPR LOPR VAL" )
+}
+
+record( longin, "$(STAT_PV=$(BLOB)_STAT_ERR)" )
+{
+#	field( SCAN, "I/O Intr" )
+#	field( DTYP, "FCOM" )
+#	field( INP,  "#C-4S$(SET)@$(BLOB)" )
+	field( TSE,  "$(EC=40)" )
+	info( autosaveFields, "HHSV HIGH HIHI HSV LLSV LOLO LOW LSV EGU DESC HOPR LOPR VAL" )
+}
+
+record( longin, "$(TS_PV=$(BLOB)_TS_ERR)" )
+{
+#	field( SCAN, "I/O Intr" )
+#	field( DTYP, "FCOM" )
+#	field( INP,  "#C-5S$(SET)@$(BLOB)" )
+	field( TSE,  "$(EC=40)" )
+	info( autosaveFields, "HHSV HIGH HIHI HSV LLSV LOLO LOW LSV EGU DESC HOPR LOPR VAL" )
+}
+

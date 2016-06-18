@@ -26,8 +26,14 @@ extern "C" {
 }
 #endif 	/* __cplusplus */
 
+/*
+ * Limits for blobs, callbacks, groups, and sets
+ * Can be increased if needed
+ */
+#define	N_DRV_FCOM_BLOBS_MAX	50
+#define	N_DRV_FCOM_CB_MAX		50
 #define	N_DRV_FCOM_GROUPS_MAX	20
-#define	N_DRV_FCOM_BLOBS_MAX	100
+#define	N_DRV_FCOM_SETS_MAX		20
 
 /**
  ** Initialize a blob in a group
@@ -70,18 +76,28 @@ IOSCANPVT	drvFcomGetGroupIoScan( unsigned int	iGroup );
 IOSCANPVT	drvFcomGetSetIoScan( unsigned int	iSet );
 
 /**
+ ** Add a blob to a set
+ **/
+extern int	drvFcomAddBlobToSet( unsigned int iSet, FcomID	id, const char * name );
+
+/**
  * Diagnostic function to support timing diagnostics relative to start of beam.
  * Set this to a function that can return the 64 bit cpu tsc for the fiducial event.
  */
 typedef	unsigned long long	(*GET_BEAM_TSC)();
-void	drvFcomSetFuncGetBeamStart( GET_BEAM_TSC pGetBeamStartFunc );
+extern void	drvFcomSetFuncGetBeamStart( GET_BEAM_TSC pGetBeamStartFunc );
 
 /**
  * Diagnostic function to support timing diagnostics
  * Set this to a function that can convert a duration in 64 bit cpu tsc to seconds
  */
 typedef	double	(*TSC_TO_TICKS)( unsigned long long );
-void	drvFcomSetFuncTicksToSec( TSC_TO_TICKS pTicksToSecFunc );
+extern void	drvFcomSetFuncTicksToSec( TSC_TO_TICKS pTicksToSecFunc );
+
+extern void	drvFcomSignalSet( unsigned int	iSet );
+
+typedef void (*SET_CB_FUNCPTR)( void * );
+extern long drvFcomAddSetCallback( unsigned int iSet, SET_CB_FUNCPTR cb, void * pArg );
 
 extern	epicsMutexId	drvFcomMutex;
 

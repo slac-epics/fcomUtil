@@ -28,6 +28,7 @@ PROD_IOC = pv2fcid
 fcomUtil_SRCS += fcomUtilRegister.cpp
 fcomUtil_SRCS += fcomUtil.c
 fcomUtil_SRCS += devFcom.c
+fcomUtil_SRCS += devFcomSubRecord.c
 fcomUtil_SRCS += drvFcom.c
 fcomUtil_LIBS += fcomBSD
 fcomUtil_LIBS += miscUtils
@@ -39,10 +40,13 @@ pv2fcid_LIBS += $(EPICS_BASE_IOC_LIBS)
 #=============================
 # Install the FCOM DTYP templates and samples
 
+DB	+=	fcomBlobAi.template
 DB	+=	fcomBlobAo.template
 DB	+=	fcomBlobAdd.template
+DB	+=	fcomBlobSet.template
 DB	+=	fcomBlobSim.template
 DB	+=	fcomGroupSend.template
+DB	+=	fcomBlobBPMS.db
 DB	+=	fcomBlobBLEN_SIM.db
 DB	+=	fcomBlobBLEN_SIM.substitutions
 DB	+=	fcomBlobBPMS_SIM.db

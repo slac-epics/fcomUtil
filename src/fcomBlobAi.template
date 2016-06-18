@@ -1,0 +1,12 @@
+# fcomBlobAi.template: Reads FCOM blob values into ai records
+record( ai, "$(PV=$(BLOB)_FCOM_RBV)" )
+{
+	field( SCAN, "$(SCAN=I/O Intr)" )
+	field( TSE,  "-2" )
+	field( DTYP, "FCOM" )
+	field( INP,  "#C$(INDEX)S$(SET)@$(BLOB)" )
+	field( EGU,  "$(EGU=)" )
+	field( PREC, "$(PREC=3)" )
+	field( FLNK, "$(FLNK=)" )
+	info( autosaveFields, "HHSV HIGH HIHI HSV LLSV LOLO LOW LSV EGU DESC HOPR LOPR PREC VAL" )
+}
