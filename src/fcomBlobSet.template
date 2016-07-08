@@ -18,7 +18,7 @@
 # to processing on event code 40 and this record will
 # synchronize the set thread.
 # You can also set EC to other event codes as needed.
-record( bo, "$(BLOB)_SET_SYNC" )
+record( bo, "$(BLOB)SET_SYNC" )
 {
 	field( SCAN, "$(SYNC=Event)" )
 	field( EVNT, "$(EC=40)" )

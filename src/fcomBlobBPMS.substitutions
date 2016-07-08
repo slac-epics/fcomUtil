@@ -12,19 +12,6 @@ file fcomBlobAi.template
 	{	"\$(PV=\$(BLOB)T_FCOM_RBV)",	2,	"\$(SET)",	"\$(BLOB)T", "Nel"		}
 }
 
-# Escape most of the macros so they can keep their
-# defaults and be defined or defaulted later.
-# Defines 3 links for X, Y, and T values for each BPM
-file fcomBlobSet.template
-{
-	{
-		SCAN	= "\$(SCAN=Event)",
-		BLOB	= "\$(BLOB)X",
-		SET		= "\$(SET)",
-		EC		= "\$(EC=40)",
-	}
-}
-
 file fcomBlobStatus.template
 {
 	{

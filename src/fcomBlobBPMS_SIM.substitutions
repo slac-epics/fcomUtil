@@ -5,11 +5,11 @@
 # Defines 3 ao records: X, Y, and T values for each BPM
 file fcomBlobAo.template
 {
-	pattern
-	{	P,				SIM,		INDEX,		GROUP,			BLOB		}
-	{	"\$(BLOB)X",	"_SIM",		0,		"\$(GROUP)",	"\$(BLOB)X"		}
-	{	"\$(BLOB)Y",	"_SIM",		1,		"\$(GROUP)",	"\$(BLOB)Y"		}
-	{	"\$(BLOB)T",	"_SIM",		2,		"\$(GROUP)",	"\$(BLOB)T"		}
+    pattern
+    {   P,           SIM,   INDEX,  EC,         GROUP,          BLOB        }
+    {   "\$(BLOB)X", "_SIM",  0,  "\$(EC=40)", "\$(GROUP)", "\$(BLOB)X"     }
+    {   "\$(BLOB)Y", "_SIM",  1,  "\$(EC=40)", "\$(GROUP)", "\$(BLOB)Y"     }
+    {   "\$(BLOB)T", "_SIM",  2,  "\$(EC=40)", "\$(GROUP)", "\$(BLOB)T"     }
 }
 
 # Escape most of the macros so they can keep their

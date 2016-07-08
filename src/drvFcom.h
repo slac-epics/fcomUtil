@@ -80,19 +80,7 @@ IOSCANPVT	drvFcomGetSetIoScan( unsigned int	iSet );
  **/
 extern int	drvFcomAddBlobToSet( unsigned int iSet, FcomID	id, const char * name );
 
-/**
- * Diagnostic function to support timing diagnostics relative to start of beam.
- * Set this to a function that can return the 64 bit cpu tsc for the fiducial event.
- */
-typedef	unsigned long long	(*GET_BEAM_TSC)();
-extern void	drvFcomSetFuncGetBeamStart( GET_BEAM_TSC pGetBeamStartFunc );
-
-/**
- * Diagnostic function to support timing diagnostics
- * Set this to a function that can convert a duration in 64 bit cpu tsc to seconds
- */
-typedef	double	(*TSC_TO_TICKS)( unsigned long long );
-extern void	drvFcomSetFuncTicksToSec( TSC_TO_TICKS pTicksToSecFunc );
+extern void	drvFcomSetSyncEventCode( int eventCode );
 
 extern void	drvFcomSignalSet( unsigned int	iSet );
 

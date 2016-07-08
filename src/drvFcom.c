@@ -42,6 +42,7 @@
 #include <epicsTypes.h>
 #include <errlog.h>
 #include <initHooks.h>
+#include <registryFunction.h>
 
 #include "fcom_api.h"
 #include "fcomUtil.h"
@@ -63,12 +64,13 @@ extern int	fcomUtilFlag;
 #include "devBusMapped.h"
 #endif
 
-#define FCOM_DRV_VERSION "FCOM driver $Revision: 1.1 $/$Name:  $"
+#define FCOM_DRV_VERSION "FCOM driver $Revision: 1.2 $/$Name:  $"
 
 
 #define TASK_PRIORITY   epicsThreadPriorityMax  /* Highest EPICS thread priority */
 
-#define DEFAULT_SET_TIMEOUT	0.007		/* Default set timeout */
+#define DEFAULT_SET_TIMEOUT		0.007		/* Default set  timeout */
+#define DEFAULT_SYNC_TIMEOUT	0.1			/* Default sync timeout */
 
 #ifndef PULSEID
 #define	PULSEID_INVALID		(0x1FFFF)
@@ -125,6 +127,7 @@ typedef	struct	drvSet
 }	drvSet;
 
 epicsMutexId		drvFcomMutex;
+int					drvFcomSyncEventCode	= 0;
 static	drvGroup	drvFcomGroups[ N_DRV_FCOM_GROUPS_MAX ];
 static	drvSet		drvFcomSets[   N_DRV_FCOM_SETS_MAX   ];
 
@@ -138,17 +141,22 @@ epicsExportAddress(int, DEBUG_DRV_FCOM_SEND);
 /*==========================================================*/
 
 epicsTimeStamp  fcomFiducialTime;
-t_HiResTime		fcomFiducialTsc = 0LL;	/* 64 bit hi-res cpu timestamp counter */
+t_HiResTime		fcomFiducialTsc	= 0LL;	/* 64 bit hi-res cpu timestamp counter */
+int				fcomFiducial	= 0x1FFFF;
 
 /*
- * To allow full diagnostic timing, call drvFcomSetFuncGetBeamStart
- * w/ a function ptr to a routine that returns the cpu tsc for
- * the start of the beam interval
+ * Diagnostic timing support
+ * When installed, it returns the CPU tsc for the start of the beam interval
  */
-GET_BEAM_TSC	GetBeamStartTsc	= NULL;	/* 64 bit hi-res cpu timestamp counter */
-void	drvFcomSetFuncGetBeamStart( GET_BEAM_TSC pGetBeamStartFunc )
+typedef	unsigned long long	(*GET_BEAM_TSC_FUNC)();
+GET_BEAM_TSC_FUNC	GetBeamStartTsc	= NULL;	/* 64 bit hi-res cpu timestamp counter */
+void	drvFcomSetFuncGetBeamStart( )
 {
-	GetBeamStartTsc = pGetBeamStartFunc;
+	REGISTRYFUNCTION	func = registryFunctionFind( "evrGetFiducialTsc" );
+	if ( func )
+		GetBeamStartTsc = (GET_BEAM_TSC_FUNC) func;
+	else
+		printf( "evrGetFiducialTsc function not available!\n" );
 }
 
 /*
@@ -156,17 +164,22 @@ void	drvFcomSetFuncGetBeamStart( GET_BEAM_TSC pGetBeamStartFunc )
  * w/ a function ptr to a routine that returns the cpu tsc for
  * the start of the beam interval
  */
-TSC_TO_TICKS	TicksToSec	= NULL;	/* 64 bit hi-res cpu timestamp counter */
-void	drvFcomSetFuncTicksToSec( TSC_TO_TICKS pTicksToSecFunc )
+typedef	double	(*TSC_TO_TICKS_FUNC)( unsigned long long );
+TSC_TO_TICKS_FUNC	TicksToSec	= NULL;	/* 64 bit hi-res cpu timestamp counter */
+void	drvFcomSetFuncTicksToSec( )
 {
-	TicksToSec = pTicksToSecFunc;
+	REGISTRYFUNCTION	func = registryFunctionFind( "HiResTicksToSeconds" );
+	if ( func )
+		TicksToSec = (TSC_TO_TICKS_FUNC) func;
+	else
+		printf( "HiResTicksToSeconds function not available!\n" );
 }
 
-static epicsUInt32
+static epicsInt32
 usSinceFiducial(void)
 {
 	t_HiResTime		curTick		= GetHiResTicks();
-	epicsUInt32		usSinceFid	= 0;
+	epicsInt32		usSinceFid	= -1;
 	if ( fcomFiducialTsc != 0 && TicksToSec != NULL )
 	{
 		usSinceFid = (*TicksToSec)( curTick - fcomFiducialTsc ) * 1e6;
@@ -197,7 +210,7 @@ pvTimePulseIdMatches(
 
 
 /* Internal use only.  Call w/ mutex locked */
-grpBlob	*	drvFcomFindAvailBlobForId( grpBlob * pFirstTxBlob, FcomID id  )
+static grpBlob	*	drvFcomFindAvailBlobForId( grpBlob * pFirstTxBlob, FcomID id  )
 {
 	size_t		iBlob;
 	grpBlob	*	pGrpBlob	= pFirstTxBlob;
@@ -212,7 +225,7 @@ grpBlob	*	drvFcomFindAvailBlobForId( grpBlob * pFirstTxBlob, FcomID id  )
 }
 
 /* Internal use only.  Call w/ mutex locked */
-grpBlob	*	drvFcomFindBlobForId( grpBlob * pFirstTxBlob, FcomID id  )
+static grpBlob	*	drvFcomFindBlobForId( grpBlob * pFirstTxBlob, FcomID id  )
 {
 	size_t		iBlob;
 	grpBlob	*	pGrpBlob	= pFirstTxBlob;
@@ -658,17 +671,60 @@ long drvFcomAddSetCallback( unsigned int iSet, SET_CB_FUNCPTR cb, void * pArg )
 	return -1;
 }
 
-/* TODO: Need to call this at start of beam w/o adding dependency on event module
- * Consider a bo record for each set w/ SCAN=Event and EVNT=40
+int		DEBUG_DRV_FCOM_COUNTDOWN	= 0;
+
+/* This function is called at start of beam w/o from
+ * a bo record for each set w/ SCAN=Event and EVNT=40 (or other EC as needed)
  */
 void drvFcomSignalSet( unsigned int	iSet )
 {
+	epicsTimeStamp		ts;
+	int					status;
+
+	if ( GetBeamStartTsc )
+		fcomFiducialTsc = GetBeamStartTsc();
+	status = epicsTimeGetEvent( &ts, 1 );
+	if ( status == 0 )
+		fcomFiducial = ts.nsec & 0x1FFFF;
+	else
+		fcomFiducial = 0x1FFFF;
+
+/* HACK */
+	if ( DEBUG_DRV_FCOM_RECV >= 4 && DEBUG_DRV_FCOM_COUNTDOWN == 0 )
+	{
+		DEBUG_DRV_FCOM_SEND			= 3;
+		DEBUG_DRV_FCOM_COUNTDOWN	= 10;
+	}
+	if ( DEBUG_DRV_FCOM_COUNTDOWN > 0 )
+	{
+		--DEBUG_DRV_FCOM_COUNTDOWN;
+		if ( DEBUG_DRV_FCOM_COUNTDOWN == 0 )
+		{
+			DEBUG_DRV_FCOM_SEND		= 2;
+			DEBUG_DRV_FCOM_RECV		= 2;
+		}
+	}
+
+#if 0
+	int					signalSetFid;
+	int					fidLast40;
+	unsigned long long	tscLast40;
+	epicsTimeGetEvent( &ts, 40 );
+	signalSetFid = ts.nsec & 0x1FFFF;
+extern int evrGetLastFiducial40();
+extern unsigned long long evrGetFiducialTsc40();
+	fidLast40 = evrGetLastFiducial40();
+	tscLast40 = evrGetFiducialTsc40();
+	if ( DEBUG_DRV_FCOM_RECV >= 3 ) errlogPrintf( "drvFcomSignalSet: set %d, EC40fid %d, fidLast40 %d, lastfid=%d (beam+%d)\n", iSet, signalSetFid, fidLast40, fcomFiducial, fcomFiducial%3 );
+#endif
+
 	if ( iSet >= N_DRV_FCOM_SETS_MAX )
 	{
 		errlogPrintf( "drvFcomGetSetIoScan: Invalid set %d\n", iSet );
 		return;
 	}
 
+	if ( DEBUG_DRV_FCOM_RECV >= 5 ) errlogPrintf( "drvFcomSignalSet: Signaling set %d, %d us after fiducial %d.\n", iSet, usSinceFiducial(), fcomFiducial );
 	if ( drvFcomSets[iSet].BlobSetSyncEvent != NULL )
 	{
 		/* Signal the BlobSetSyncEvent to trigger the fcomGetBlobSet call */
@@ -684,6 +740,10 @@ static int drvFcomSetTask(void * parg)
 	unsigned int		iCb;
 	int					status	= 0;
 	drvSet			*	pSet	= (drvSet *) parg;
+/*	unsigned long long	tscNow; */
+	epicsTimeStamp		syncTimeStamp;
+	epicsInt32			syncWakeupDelay;
+	double				syncTimeout	= DEFAULT_SYNC_TIMEOUT;
 
     epicsMutexLock(drvFcomMutex);
 	/* Create synchronization event */
@@ -698,18 +758,26 @@ static int drvFcomSetTask(void * parg)
 
 	while ( pSet->exitTask == 0 )
 	{
-		status = epicsEventWaitWithTimeout( pSet->BlobSetSyncEvent, pSet->timeout );
+		status = epicsEventWaitWithTimeout( pSet->BlobSetSyncEvent, syncTimeout );
 		switch( status )
 		{
 		case epicsEventWaitTimeout:
-			if ( DEBUG_DRV_FCOM_RECV >= 3 ) errlogPrintf( "drvFcomSetTask %d: Timed out waiting for Sync event\n", pSet->iSet );
+			if ( DEBUG_DRV_FCOM_RECV >= 3 ) errlogPrintf( "drvFcomSetTask %d: %f sec timeout waiting for Sync event\n", pSet->iSet, syncTimeout );
 			continue;
 		default:
-			if ( DEBUG_DRV_FCOM_RECV >= 1 ) errlogPrintf( "drvFcomSetTask %d: Timed out waiting for Sync event\n", pSet->iSet );
+			if ( DEBUG_DRV_FCOM_RECV >= 1 )
 				errlogPrintf( "Unexpected epicsEventWaitWithTimeout Error: %d\n", status );
 			continue;
 		case epicsEventWaitOK:
 			break;
+		}
+
+		syncWakeupDelay	= usSinceFiducial();
+		if ( /* syncWakeupDelay >= 0 && */ DEBUG_DRV_FCOM_RECV >= 4 )
+			errlogPrintf("drvFcomSetTask %d: Woke up %d us after fiducial %d.\n", pSet->iSet, syncWakeupDelay, fcomFiducial );
+
+		if ( drvFcomSyncEventCode ) {
+			status = epicsTimeGetEvent( &syncTimeStamp, drvFcomSyncEventCode );
 		}
 
 #if 0	/* fcomGetBlobSet */
@@ -800,9 +868,17 @@ static int drvFcomSetTask(void * parg)
 				pSetBlob->nStatErrors++;
 			}
 
+			if ( drvFcomSyncEventCode ) {
+				if ( status == 0 ) {
+					status = pvTimePulseIdMatches( &syncTimeStamp, pSetBlob->pBlob );
+					if ( status != 0 ) {
+						pSetBlob->nTsErrors++;
+					}
+				}
+			}
 			fid = pSetBlob->pBlob->fc_tsLo & 0x1FFFF;
 			if ( DEBUG_DRV_FCOM_RECV >= 3 )
-				printf( "drvFcomSetTask: Set %u, Rcvd Blob "FCOM_ID_FMT", %s, fid %d\n", pSet->iSet, pSetBlob->blobId, pSetBlob->name, fid );
+				printf( "drvFcomSetTask: Set %u, Rcvd Blob "FCOM_ID_FMT", %s, fid %d, %d us after fid %d\n", pSet->iSet, pSetBlob->blobId, pSetBlob->name, fid, usSinceFiducial(), fcomFiducial );
 
 		}
 		epicsMutexUnlock(drvFcomMutex);
@@ -820,7 +896,7 @@ static int drvFcomSetTask(void * parg)
 			if( pSet->setCallbacks[iCb].cb != NULL )
 			{
 				if ( DEBUG_DRV_FCOM_RECV >= 4 )
-					printf( "drvFcomAddSetCallback: Calling set %u callback %u\n", pSet->iSet, iCb );
+					printf( "drvFcomAddSetCallback: Calling set %u callback %u, %d us after fid %d\n", pSet->iSet, iCb, usSinceFiducial(), fcomFiducial );
 				pSet->setCallbacks[iCb].cb( pSet->setCallbacks[iCb].arg );
 			}
 		}
@@ -944,7 +1020,10 @@ int drvFcomAddBlobToSet( unsigned int iSet, FcomID blobId, const char * name )
 	return 0;
 }
 
-
+void	drvFcomSetSyncEventCode( int eventCode )
+{
+	drvFcomSyncEventCode	= eventCode;
+}
 
 /**************************************************************************************************/
 /* Here we supply the driver functions for epics                                            */
@@ -967,11 +1046,17 @@ static long drvFcom_Init()
 	unsigned int iGroup;
 	unsigned int iSet;
 	unsigned int iCb;
+
+	/* See if we have timing diagnostic functions available */
+	drvFcomSetFuncGetBeamStart( );
+	drvFcomSetFuncTicksToSec( );
+
     printf( "drvFcom_Init:\n" );
 
 	drvFcomMutex = epicsMutexMustCreate();
 
 	epicsMutexLock( drvFcomMutex );
+
 	/* Initialize the driver tables */
 	for ( iGroup = 0; iGroup < N_DRV_FCOM_GROUPS_MAX; iGroup++ )
 	{

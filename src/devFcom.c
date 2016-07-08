@@ -284,11 +284,15 @@ static long init_bo( struct boRecord * pbo)
 	{
 		/* All we need is a group number for a SEND boRecord */
 		iGroup		= pVmeIo->signal;
+if ( DEBUG_DEV_FCOM_RECV >= 1 ) printf( "init_bo %s: Group %d, Set %d, Blob "FCOM_ID_FMT", param :%s:\n", pbo->name, iGroup, iSet, blobId, pVmeIo->parm );
 	}
 	else if ( strcmp( pVmeIo->parm, "SYNC" ) == 0 )
 	{
 		/* All we need is a set number for a SYNC boRecord */
 		iSet		= pVmeIo->signal;
+		if ( pbo->evnt != 0 )
+			drvFcomSetSyncEventCode( pbo->evnt );
+if ( DEBUG_DEV_FCOM_RECV >= 1 ) printf( "init_bo %s: Group %d, Set %d, Blob "FCOM_ID_FMT", param :%s:\n", pbo->name, iGroup, iSet, blobId, pVmeIo->parm );
 	}
 	else
 	{
@@ -301,6 +305,7 @@ static long init_bo( struct boRecord * pbo)
 			return (S_db_badField);
 		}
 		iGroup		= pVmeIo->signal;
+if ( DEBUG_DEV_FCOM_RECV >= 1 ) printf( "init_bo %s: Group %d, Set %d, Blob "FCOM_ID_FMT", param :%s:\n", pbo->name, iGroup, iSet, blobId, pVmeIo->parm );
 	}
 
 	pDevPvt	= (devFcomPvt *) callocMustSucceed( 1, sizeof(devFcomPvt), "devFcom init_bo" );
