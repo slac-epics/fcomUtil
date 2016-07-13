@@ -22,8 +22,9 @@ DBD += fcomUtil.dbd
 DBD += devFcom.dbd
 
 LIBRARY_IOC = fcomUtil
+ifneq ($(T_A),linux-x86)
 PROD_IOC = pv2fcid
-
+endif
 
 fcomUtil_SRCS += fcomUtilRegister.cpp
 fcomUtil_SRCS += fcomUtil.c
