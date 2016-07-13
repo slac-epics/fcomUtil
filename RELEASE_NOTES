@@ -1,3 +1,7 @@
+fcomUtil-R1-1-38: carolina (07/13/2016)
+                  Built against fcom-R1-3-35 as I need udpComm-R2-5-9-BR-3
+			As it required for event-R4-2-5
+
 fcomUtil-R1-1-37: bhill (06/11/2016)
                   Built against fcom-R1-3-32 as I need udpComm-R2-7-0
 				  Blob send part of drvFcom implemented and working.
