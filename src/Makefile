@@ -22,7 +22,7 @@ DBD += fcomUtil.dbd
 DBD += devFcom.dbd
 
 LIBRARY_IOC = fcomUtil
-ifneq ($(T_A),linux-x86)
+ifeq ($(filter linux-x86%,$(T_A))xx,xx)
 PROD_IOC = pv2fcid
 endif
 
