@@ -1,3 +1,7 @@
+fcomUtil-R1-2-3: sonya (07/20/2016)
+                  src/Makefile: Filter out all linux-x86 architectures when
+		        building pv2fcid IOC
+
 fcomUtil-R1-2-2: carolina (07/13/2016)
                   Built against fcom-R1-3-35 as I need udpComm-R2-5-9-BR-3
 			As it required for event-R4-2-5
