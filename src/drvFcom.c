@@ -64,7 +64,7 @@ extern int	fcomUtilFlag;
 #include "devBusMapped.h"
 #endif
 
-#define FCOM_DRV_VERSION "FCOM driver $Revision: 1.2 $/$Name:  $"
+#define FCOM_DRV_VERSION "FCOM driver $Revision: 1.3 $/$Name:  $"
 
 
 #define TASK_PRIORITY   epicsThreadPriorityMax  /* Highest EPICS thread priority */
@@ -111,6 +111,8 @@ typedef	struct	setBlob
 	unsigned int	nTsErrors;		/* Number of blobs w/ mismatched timestamps	*/
 	FcomID			blobId;			/* Fcom Blob ID */
 	FcomBlob	*	pBlob;			/* Ptr to Fcom Blob */
+	uint32_t		prior_tsHi;		/* Prior blob timestamp tsHi */
+	uint32_t		prior_tsLo;		/* Prior blob timestamp tsLo */
 	const char	*	name;			/* Original blob name */
 }	setBlob;
 
@@ -720,7 +722,7 @@ extern unsigned long long evrGetFiducialTsc40();
 
 	if ( iSet >= N_DRV_FCOM_SETS_MAX )
 	{
-		errlogPrintf( "drvFcomGetSetIoScan: Invalid set %d\n", iSet );
+		errlogPrintf( "drvFcomSignalSet: Invalid set %d\n", iSet );
 		return;
 	}
 
@@ -842,6 +844,12 @@ static int drvFcomSetTask(void * parg)
 			if ( pSetBlob->blobId == FCOM_ID_NONE )
 				continue;
 			status = fcomGetBlob( pSetBlob->blobId, &pSetBlob->pBlob, 0 );
+			if (	pSetBlob->pBlob != NULL
+				&&	pSetBlob->prior_tsHi == pSetBlob->pBlob->fc_tsHi
+				&&	pSetBlob->prior_tsLo == pSetBlob->pBlob->fc_tsLo )
+			{
+				status	= FCOM_ERR_NO_DATA;
+			}
 
 			switch ( status )
 			{
@@ -850,14 +858,19 @@ static int drvFcomSetTask(void * parg)
 				break;
 			case FCOM_ERR_NO_DATA:
 				pSetBlob->nTimeouts++;
+				fcomReleaseBlob( &pSetBlob->pBlob );
 				continue;
 			default:
 				pSetBlob->nGetErrors++;
 				errlogPrintf( "drvFcomSetTask Error: Set %d, Blob "FCOM_ID_FMT", %s\n", pSet->iSet, pSetBlob->blobId, fcomStrerror(status) );
+				fcomReleaseBlob( &pSetBlob->pBlob );
 				continue;
 			}
 
 			assert( pSetBlob->pBlob != NULL );
+			pSetBlob->prior_tsHi = pSetBlob->pBlob->fc_tsHi;
+			pSetBlob->prior_tsLo = pSetBlob->pBlob->fc_tsLo;
+
 			/* Check blob status */
 			if ( pSetBlob->pBlob->fc_stat != 0 )
 			{
@@ -879,7 +892,7 @@ static int drvFcomSetTask(void * parg)
 			fid = pSetBlob->pBlob->fc_tsLo & 0x1FFFF;
 			if ( DEBUG_DRV_FCOM_RECV >= 3 )
 				printf( "drvFcomSetTask: Set %u, Rcvd Blob "FCOM_ID_FMT", %s, fid %d, %d us after fid %d\n", pSet->iSet, pSetBlob->blobId, pSetBlob->name, fid, usSinceFiducial(), fcomFiducial );
-
+			fcomReleaseBlob( &pSetBlob->pBlob );
 		}
 		epicsMutexUnlock(drvFcomMutex);
 #endif 	/* fcomGetBlobSet */

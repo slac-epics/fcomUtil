@@ -55,6 +55,8 @@ typedef struct	devFcomPvt
 	int				iSet;
 	int				iValue;
 	FcomID			blobId;
+	uint32_t		prior_tsHi;
+	uint32_t		prior_tsLo;
 	const char	*	pParamName;
 	dbCommon	*	pRecord;
 }	devFcomPvt;
@@ -134,6 +136,8 @@ static long read_ai(struct aiRecord *pai)
 	status = fcomGetBlob( pDevPvt->blobId, &pBlob, 0 );
 	if (	status != 0
 		||	pBlob == NULL
+		||	(	pDevPvt->prior_tsHi == pBlob->fc_tsHi
+			&&	pDevPvt->prior_tsLo == pBlob->fc_tsLo	)
 		||	pBlob->fc_nelm <= pDevPvt->iValue
 		||	(	pBlob->fc_type != FCOM_EL_DOUBLE
 			&&	pBlob->fc_type != FCOM_EL_FLOAT	) )
@@ -162,6 +166,8 @@ static long read_ai(struct aiRecord *pai)
 		recGblGetTimeStamp( pai );
 	}
 
+	pDevPvt->prior_tsHi = pBlob->fc_tsHi;
+	pDevPvt->prior_tsLo = pBlob->fc_tsLo;
 	fcomReleaseBlob( &pBlob );
 	fid			= pai->time.nsec & 0x1FFFF;
 	pai->udf	= FALSE;
@@ -206,6 +212,8 @@ static long init_ao( struct aoRecord * pao)
 	pDevPvt->iGroup		= pVmeIo->signal;
 	pDevPvt->iSet		= -1;
 	pDevPvt->blobId		= blobId;
+	pDevPvt->prior_tsHi	= 0;
+	pDevPvt->prior_tsLo	= 0;
 	pDevPvt->pParamName	= pVmeIo->parm;
 	pDevPvt->pRecord	= (dbCommon *) pao;
     pao->dpvt			= pDevPvt;
