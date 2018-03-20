@@ -298,8 +298,16 @@ if ( DEBUG_DEV_FCOM_RECV >= 1 ) printf( "init_bo %s: Group %d, Set %d, Blob "FCO
 	{
 		/* All we need is a set number for a SYNC boRecord */
 		iSet		= pVmeIo->signal;
-		if ( pbo->evnt != 0 )
-			drvFcomSetSyncEventCode( pbo->evnt );
+		if ( pbo->evnt[0] != 0 ) {
+			int code;
+            if ( 1 == sscanf(pbo->evnt, "%i", &code) ) {
+				if ( code != 0 ) {
+					drvFcomSetSyncEventCode( code );
+				}
+            } else {
+				cantProceed("init_bo (devBoFcom) -- handling named events (3.15) not implemented");
+			}
+		}
 if ( DEBUG_DEV_FCOM_RECV >= 1 ) printf( "init_bo %s: Group %d, Set %d, Blob "FCOM_ID_FMT", param :%s:\n", pbo->name, iGroup, iSet, blobId, pVmeIo->parm );
 	}
 	else
