@@ -31,6 +31,7 @@
 #include <boRecord.h>
 #include <longinRecord.h>
 #include <longoutRecord.h>
+#include <epicsVersion.h>
 #if 0
 #include <epicsMutex.h>
 #endif
@@ -298,6 +299,7 @@ if ( DEBUG_DEV_FCOM_RECV >= 1 ) printf( "init_bo %s: Group %d, Set %d, Blob "FCO
 	{
 		/* All we need is a set number for a SYNC boRecord */
 		iSet		= pVmeIo->signal;
+#if (EPICS_VERSION) > 3 || ( (EPICS_VERSION) == 3 && (EPICS_REVISION) > 14 )
 		if ( pbo->evnt[0] != 0 ) {
 			int code;
             if ( 1 == sscanf(pbo->evnt, "%i", &code) ) {
@@ -308,6 +310,11 @@ if ( DEBUG_DEV_FCOM_RECV >= 1 ) printf( "init_bo %s: Group %d, Set %d, Blob "FCO
 				cantProceed("init_bo (devBoFcom) -- handling named events (3.15) not implemented");
 			}
 		}
+#else
+		if ( pbo->evnt != 0 ) {
+			drvFcomSetSyncEventCode( code );
+		}
+#endif
 if ( DEBUG_DEV_FCOM_RECV >= 1 ) printf( "init_bo %s: Group %d, Set %d, Blob "FCOM_ID_FMT", param :%s:\n", pbo->name, iGroup, iSet, blobId, pVmeIo->parm );
 	}
 	else
