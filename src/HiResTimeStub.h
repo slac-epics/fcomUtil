@@ -62,6 +62,14 @@ extern __inline__ t_HiResTime GetHiResTicks()
 	read_tsc( tscVal );
 	return tscVal;
 }
+#else
+#include <time.h>
+extern __inline__ t_HiResTime GetHiResTicks()
+{
+struct timespec now;
+	clock_gettime(CLOCK_REALTIME, &now);
+	return (1000000000ULL*(unsigned long long)now.tv_sec) + (unsigned long long)now.tv_nsec;
+}
 #endif	/*	read_tsc	*/
 
 #ifdef	__cplusplus
