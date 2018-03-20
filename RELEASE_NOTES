@@ -1,3 +1,8 @@
+R1.7.0: straumann, 3/20/2018
+    Added default implementation for HiResTicks based on clock_gettime()
+	3.15 had named events - try to convert pbo->evnt to an integer...
+	Don't link full libFcomUtil to pv2fcid -- only relevant sources
+    in order to avoid pulling in FCOM + UDPCOMM.
 R1.6.0: straumann, 3/20/2018
     Built against fcom/R1.7.0
 
