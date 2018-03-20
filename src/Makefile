@@ -22,9 +22,7 @@ DBD += fcomUtil.dbd
 DBD += devFcom.dbd
 
 LIBRARY_IOC = fcomUtil
-ifeq ($(filter linux-x86%,$(T_A))xx,xx)
-PROD_IOC = pv2fcid
-endif
+PROD_IOC    = pv2fcid
 
 fcomUtil_SRCS += fcomUtilRegister.cpp
 fcomUtil_SRCS += fcomUtil.c
@@ -35,8 +33,7 @@ fcomUtil_LIBS += fcomBSD
 fcomUtil_LIBS += miscUtils
 fcomUtil_LIBS := $(EPICS_BASE_IOC_LIBS)
 
-pv2fcid_SRCS = pv2fcid.c
-pv2fcid_LIBS = fcomUtil
+pv2fcid_SRCS = pv2fcid.c fcomUtil.c
 pv2fcid_LIBS += $(EPICS_BASE_IOC_LIBS)
 #=============================
 # Install the FCOM DTYP templates and samples
