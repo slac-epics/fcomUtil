@@ -1,3 +1,6 @@
+R1.9.6: Kukhee Kim, 05/16/2018
+    - build against fcom R1.9.6 (support evrClient module)
+
 R1.9.5: Kukhee Kim, 05/16/2018
    - build against fcom R1.9.5  (support evnet module)
 
