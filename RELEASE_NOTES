@@ -1,3 +1,6 @@
+R1.9.7: Kukhee Kim, 06/28/2018
+    - build against fcom R1.9.7 (support event module)
+
 R1.9.6: Kukhee Kim, 05/16/2018
     - build against fcom R1.9.6 (support evrClient module)
 
