@@ -1,3 +1,6 @@
+R1.9.13 Kukhee Kim, 11/02/2018
+    - build against fcom R1.9.13 (support event)
+
 R1.9.12 Kukhee Kim, 10/16/2018
     - build against fcom R1.9.12 (support evrClient)
 
