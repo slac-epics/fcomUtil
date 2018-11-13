@@ -1,3 +1,6 @@
+R1.9.16 Kukhee Kim, 11/13/2018
+   - build against fcom R1.9.16 (support evrClient)
+
 R1.9.15 Kukhee Kim, 11/13/2018
    - build against fcom R1.9.15  (spport evnet)
 
