@@ -1,3 +1,5 @@
+fcomutil-R1-1-31-BR-1: Kukhee Kim (03/05/2020)
+                  Build against fcom-R1-3-28-BR-1 and miscUtils-R2-2-3
 
 -----------------------------------------------------------
 Branched out fcomUtil-R1-1-31-BR to support fcom-R1-3-28-BR
