@@ -62,9 +62,9 @@ static char * fcomStrtok_r(char *s1, const char *s2, char **lasts);
 /*                                                                                             */
 /************************************************************************************************/
 #define MAX_SETPOINTS  17   /* ensure count is compatible with setpoint_ca list count below !!! */
-#define MAX_AREAS      25   /* ensure count is compatible with area_ca list count below !!!     */
+#define MAX_AREAS      30   /* ensure count is compatible with area_ca list count below !!!     */
 #define MAX_DEVTYPES    8   /* ensure count is compatible with devtype_ca list count below !!!  */
-#define MAX_RFNAMES    30   /* ensure count is compatible with rfname_ca list count below !!!   */
+#define MAX_RFNAMES    28   /* ensure count is compatible with rfname_ca list count below !!!   */
 /* Shantha Condamoor: 27-Feb-2014: increased detector list by 1 to add TCAV */
 #define MAX_DETECTOR_NAMES  3/* ensure count is compatible with detector_ca list count below !!!   */
 #define MAX_LOOP_TYPES  3   /* ensure count is compatible with looptype_ca list count below !!!   */
