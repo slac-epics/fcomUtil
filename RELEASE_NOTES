@@ -1,3 +1,7 @@
+R1.9.24 Kukhee Kim, 03/10/2020 (support evrClient)
+    - build against fcom R1.9.24
+    - apply new area names
+
 R1.9.23 Kukhee Kim, 03/10/2020 (support event)
     - build against fcom R1.9.21
     - apply new area names
