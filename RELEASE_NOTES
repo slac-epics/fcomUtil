@@ -1,3 +1,13 @@
+fcomUtil-R1-2-4-BR-1 Kukhee Kim
+                    build with fcom-R1-3-35-BR-1
+                    appy new area names
+
+
+fcomUtil-R1-2-4-BR   Kukhee Kim
+-------------------------------
+Branch out from fcomUtil-R1-2-4
+-------------------------------
+
 fcomUtil-R1-2-3: sonya (07/20/2016)
                   src/Makefile: Filter out all linux-x86 architectures when
 		        building pv2fcid IOC
