@@ -1,3 +1,6 @@
+R1.9.29 Kukhee Kim,    06/16/2002 (support event)
+     - build against fcom R1.9.29
+
 R1.9.28 Sonya Hoobler, 04/12/2022
      - build against fcom R1.9.28
          to be compatible with udpComm, allowing more open file descriptors
