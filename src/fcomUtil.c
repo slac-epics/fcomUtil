@@ -62,7 +62,7 @@ static char * fcomStrtok_r(char *s1, const char *s2, char **lasts);
 /*                                                                                             */
 /************************************************************************************************/
 #define MAX_SETPOINTS  17   /* ensure count is compatible with setpoint_ca list count below !!! */
-#define MAX_AREAS      30   /* ensure count is compatible with area_ca list count below !!!     */
+#define MAX_AREAS      31   /* ensure count is compatible with area_ca list count below !!!     */
 #define MAX_DEVTYPES    8   /* ensure count is compatible with devtype_ca list count below !!!  */
 #define MAX_RFNAMES    28   /* ensure count is compatible with rfname_ca list count below !!!   */
 /* Shantha Condamoor: 27-Feb-2014: increased detector list by 1 to add TCAV */
@@ -78,7 +78,7 @@ static const char * setpoint_ca[MAX_SETPOINTS] = { "BCTRL", "L0A_PDES", "L0A_ADE
 
 /* list of areas  - add future here ; also update MAX_AREAS above      */
 static const char * area_ca[MAX_AREAS] = { "IN20", "LI21", "LI22", "LI23", "LI24", "LI25", "LI26", "LI27", "LI28", "LI29", "LI30",
-                                           "BSYH", "CLTH", "LTUH", "UNDH", "DMPH", "FEEH", "BSYS", "CLTS", "LTUS", "UNDS", "DMPS", "FEES", 
+                                           "BSYH", "CLTH", "LTUH", "UNDH", "DMPH", "FEE1", "FEEH", "BSYS", "CLTS", "LTUS", "UNDS", "DMPS", "FEES", 
                                            "NEH1", "FEH1",
                                            "FB01", "FB02", "FB03", "FB04", "FB05"};
 /* list of device types- add future here; also update MAX_DEVTYPES above */
