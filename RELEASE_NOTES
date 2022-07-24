@@ -1,3 +1,7 @@
+fcomUtil-R1-2-4-BR-3 Jeremy Mock (July 24, 2022)
+      * make fcomUtil.h match with definitions in master branch
+        * FEE1 was in the wrong spot in this branch
+
 fcomUtil-R1-2-4-BR-2 Kukhee Kim
                    build with fcom-R1-3-35-BR-2
 
