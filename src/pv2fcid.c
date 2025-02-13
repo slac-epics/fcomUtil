@@ -1,3 +1,12 @@
+//////////////////////////////////////////////////////////////////////////////
+// This file is part of 'fcomUtil'.
+// It is subject to the license terms in the LICENSE.txt file found in the 
+// top-level directory of this distribution and at: 
+//    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
+// No part of 'fcomUtil', including this file, 
+// may be copied, modified, propagated, or distributed except according to 
+// the terms contained in the LICENSE.txt file.
+//////////////////////////////////////////////////////////////////////////////
 /* $Id: pv2fcid.c,v 1.1 2010/03/19 22:46:56 strauman Exp $ */
 #include <stdio.h>
 #include <fcomUtil.h>

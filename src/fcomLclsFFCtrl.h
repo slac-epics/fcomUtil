@@ -1,3 +1,12 @@
+//////////////////////////////////////////////////////////////////////////////
+// This file is part of 'fcomUtil'.
+// It is subject to the license terms in the LICENSE.txt file found in the 
+// top-level directory of this distribution and at: 
+//    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
+// No part of 'fcomUtil', including this file, 
+// may be copied, modified, propagated, or distributed except according to 
+// the terms contained in the LICENSE.txt file.
+//////////////////////////////////////////////////////////////////////////////
 #ifndef FCOM_LCLS_FFCTRL_H
 #define FCOM_LCLS_FFCTRL_H
 /* $Id: fcomLclsFFCtrl.h,v 1.2 2010/11/03 21:50:30 dfairley Exp $ */
