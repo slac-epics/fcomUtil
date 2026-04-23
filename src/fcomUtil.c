@@ -70,10 +70,10 @@ static char * fcomStrtok_r(char *s1, const char *s2, char **lasts);
 /* Used for parsing PV Names - NOTE Dependencies -                                             */
 /*                                                                                             */
 /************************************************************************************************/
-#define MAX_SETPOINTS  17   /* ensure count is compatible with setpoint_ca list count below !!! */
+#define MAX_SETPOINTS  22   /* ensure count is compatible with setpoint_ca list count below !!! */
 #define MAX_AREAS      31   /* ensure count is compatible with area_ca list count below !!!     */
 #define MAX_DEVTYPES    8   /* ensure count is compatible with devtype_ca list count below !!!  */
-#define MAX_RFNAMES    28   /* ensure count is compatible with rfname_ca list count below !!!   */
+#define MAX_RFNAMES    34   /* ensure count is compatible with rfname_ca list count below !!!   */
 /* Shantha Condamoor: 27-Feb-2014: increased detector list by 1 to add TCAV */
 #define MAX_DETECTOR_NAMES  3/* ensure count is compatible with detector_ca list count below !!!   */
 #define MAX_LOOP_TYPES  3   /* ensure count is compatible with looptype_ca list count below !!!   */
@@ -83,7 +83,8 @@ static char * fcomStrtok_r(char *s1, const char *s2, char **lasts);
 /* list of setpoints - add future here [row] [col]; also update MAX_SETPOINTS above */
 static const char * setpoint_ca[MAX_SETPOINTS] = { "BCTRL", "L0A_PDES", "L0A_ADES", "L0B_PDES", "L0B_ADES", 
 		"TC0_PDES","TC0_ADES", "L1S_PDES", "L1S_ADES", "L1X_PDES", "L1X_ADES", "PDES", "ADES", 
-        "KLY_PDES","KLY_ADES", "TC3_PDES", "TC3_ADES", };
+        "KLY_PDES","KLY_ADES", "TC3_PDES", "TC3_ADES", "L0B_ADES2", "L1S_ADES2", "L1S_PDES2",
+        "PDES2", "ADES2"};
 
 /* list of areas  - add future here ; also update MAX_AREAS above      */
 static const char * area_ca[MAX_AREAS] = { "IN20", "LI21", "LI22", "LI23", "LI24", "LI25", "LI26", "LI27", "LI28", "LI29", "LI30",
@@ -102,7 +103,8 @@ static const char * rfname_ca[MAX_RFNAMES]= { "ACCL:IN20:300:L0A_PDES", "ACCL:IN
 		"ACCL:LI24:100:KLY_PDES", "ACCL:LI24:100:KLY_ADES", "ACCL:LI24:200:KLY_PDES","ACCL:LI24:200:KLY_ADES",  
 		"ACCL:LI24:300:KLY_PDES","ACCL:LI24:300:KLY_ADES","ACCL:LI29:0:KLY_PDES","ACCL:LI29:0:KLY_ADES",  
 		"ACCL:LI30:0:KLY_PDES", "ACCL:LI30:0:KLY_ADES","ACCL:LI22:1:PDES", "ACCL:LI22:1:ADES",
-                "ACCL:LI25:1:PDES", "ACCL:LI25:1:ADES"};
+        "ACCL:LI25:1:PDES", "ACCL:LI25:1:ADES", "ACCL:IN20:400:L0B_ADES2", "ACCL:LI21:1:L1S_ADES2",
+        "ACCL:LI21:1:L1S_PDES2", "ACCL:LI22:1:ADES2", "ACCL:LI22:1:PDES2", "ACCL:LI25:1:ADES2"};
 
 /* list of feedback loop types */
 static const char * looptype_ca[MAX_LOOP_TYPES] = {"TR", "LG", "GN" };
