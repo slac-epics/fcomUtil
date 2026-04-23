@@ -1,3 +1,6 @@
+pre_release K. Leleux 04/23/26:
+    - adding new RF devices and setpoints to support abstraction layer
+      dual-energy split and new longitudinal SXR feedback
 R1.9.34 J. Lorelli,     02/28/2024
      - build against fcom R1.9.34
 
