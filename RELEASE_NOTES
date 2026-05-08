@@ -1,3 +1,8 @@
+pre_release Kyle Leleux (kleleux)
+    * adding new rf devices to support dual-energy split of abstraction layer
+    * whittling down cross-compiler target archs to relevant ones that build on rocky9
+    * Updating RELEASE_SITE  (although it should probably just be removed since eco handles this usually?)
+
 fcomUtil-R1-2-4-BR-3 Jeremy Mock (July 24, 2022)
       * make fcomUtil.h match with definitions in master branch
         * FEE1 was in the wrong spot in this branch
