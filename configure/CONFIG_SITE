@@ -15,7 +15,8 @@
 #CROSS_COMPILER_TARGET_ARCHS = RTEMS-beatnik RTEMS-uC5282 
 
 ALL_ARCHS:=$(CROSS_COMPILER_TARGET_ARCHS)
-CROSS_COMPILER_TARGET_ARCHS = $(filter-out vxworks% vxWorks%,$(ALL_ARCHS))
+
+CROSS_COMPILER_TARGET_ARCHS = RTEMS-mvme3100 RTEMS-uC5282 RTEMS-beatnik
 
 # Set this when your IOC and the host use different paths
 # to access the application. This will be needed to boot
