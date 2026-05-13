@@ -1,0 +1,10 @@
+bin
+db
+dbd
+doc
+include
+lib
+RELEASE_SITE
+O.*
+*.log
+apply_license_log.txt
