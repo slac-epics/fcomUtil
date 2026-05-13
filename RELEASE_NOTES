@@ -1,4 +1,4 @@
-pre_release Kyle Leleux (kleleux)
+R1.2.4-1.4.0  Kyle Leleux (kleleux) - May 13, 2026
     * adding new rf devices to support dual-energy split of abstraction layer
     * whittling down cross-compiler target archs to relevant ones that build on rocky9
     * Updating RELEASE_SITE  (although it should probably just be removed since eco handles this usually?)
